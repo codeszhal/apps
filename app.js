@@ -73,10 +73,10 @@ function defaultState() {
     compact: false,
     fontScale: 100,
     labels: {
-      incomeName: "姓名",
+      incomeName: "名",
       incomeMoney: "金额",
       incomeTotal: "合计",
-      expenseName: "姓名",
+      expenseName: "名",
       expenseMoney: "金额",
       expenseTotal: "合计"
     },
@@ -472,6 +472,13 @@ function entryStatus(entryData) {
   return { type: "ok", text: "已计算" };
 }
 
+function inlineStatus(entryData) {
+  if (entryData.state === "error") return "错误";
+  if (entryData.state === "typing") return "输入中";
+  if (!hasValue(entryData.expr)) return "输入中";
+  return "有效";
+}
+
 function totals() {
   const income = state.incomeRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const expense = state.expenseRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -501,11 +508,12 @@ function moneyEditor(side, index, value) {
         data-index="${index}"
         placeholder="100+20"
         onfocus="setActiveMoneyInput(this)"
-        oninput="updateEntry('${side}', ${index}, 'expr', this.value)"
-        onkeyup="updateEntry('${side}', ${index}, 'expr', this.value)"
+        oninput="adjustTextareaHeight(this); updateEntry('${side}', ${index}, 'expr', this.value)"
+        onkeyup="adjustTextareaHeight(this); updateEntry('${side}', ${index}, 'expr', this.value)"
         onchange="updateEntry('${side}', ${index}, 'expr', this.value)"
-        onpaste="setTimeout(() => updateEntry('${side}', ${index}, 'expr', this.value), 0)"
+        onpaste="setTimeout(() => { adjustTextareaHeight(this); updateEntry('${side}', ${index}, 'expr', this.value); }, 0)"
         onblur="updateEntry('${side}', ${index}, 'expr', this.value)">${escapeHtml(value)}</textarea>
+      <span class="inline-status" data-inline-status="${side}-${index}">${inlineStatus(entryData)}</span>
     </div>
   `;
 }
@@ -534,24 +542,27 @@ function renderLedger(side) {
     return `
       <article class="entry-wrap ${status.type}" data-row="${side}-${index}">
         <div class="ledger-row">
+          <div class="cell index-cell"><span class="row-index">${index + 1}</span></div>
           <div class="cell">
             <input value="${escapeHtml(item.name)}" placeholder="名"
               oninput="updateEntry('${side}', ${index}, 'name', this.value)" />
           </div>
           <div class="cell">${moneyEditor(side, index, item.expr)}</div>
           <div class="cell">${amountBox(side, index)}</div>
+          <div class="cell action-cell">
+            <button class="icon-btn danger" onclick="deleteEntry('${side}', ${index})" title="删除">
+              <img src="assets/icons/x.svg" alt="" />
+            </button>
+          </div>
         </div>
         <div class="row-meta">
           <span class="pill ${status.type}" data-status="${side}-${index}">${escapeHtml(status.text)}</span>
-          <div class="row-actions">
-            <button class="icon-btn" onclick="openExprDialog('${side}', ${index})">全文</button>
-            <button class="icon-btn" onclick="sendEntry('${side}', ${index})">发</button>
-            <button class="icon-btn danger" onclick="deleteEntry('${side}', ${index})">×</button>
-          </div>
         </div>
       </article>
     `;
   }).join("");
+
+  requestAnimationFrame(() => adjustAllTextareas());
 }
 
 function refreshEntryVisual(side, index) {
@@ -576,6 +587,11 @@ function refreshEntryVisual(side, index) {
   document.querySelectorAll(`textarea[data-side="${side}"][data-index="${index}"]`).forEach((area) => {
     const wrap = area.closest(".money-wrap");
     if (wrap) wrap.className = `money-wrap ${item.state || "ok"}`;
+    adjustTextareaHeight(area);
+  });
+
+  document.querySelectorAll(`[data-inline-status="${side}-${index}"]`).forEach((node) => {
+    node.textContent = inlineStatus(item);
   });
 }
 
@@ -702,8 +718,20 @@ function scheduleLiveRecalc() {
 
 function setActiveMoneyInput(input) {
   activeMoneyInput = input;
+  adjustTextareaHeight(input);
 }
 window.setActiveMoneyInput = setActiveMoneyInput;
+
+function adjustTextareaHeight(textarea) {
+  if (!textarea) return;
+  textarea.style.height = "auto";
+  textarea.style.height = `${Math.max(36, textarea.scrollHeight)}px`;
+}
+window.adjustTextareaHeight = adjustTextareaHeight;
+
+function adjustAllTextareas() {
+  document.querySelectorAll(".money-editor").forEach((textarea) => adjustTextareaHeight(textarea));
+}
 
 function insertToActiveMoneyInput(text) {
   if (!activeMoneyInput) {
@@ -854,10 +882,10 @@ function bindEditable(element, callback) {
 }
 
 bindEditable(el.appTitle, (value) => state.title = value || "收支核对");
-bindEditable(el.incomeNameLabel, (value) => state.labels.incomeName = value || "姓名");
+bindEditable(el.incomeNameLabel, (value) => state.labels.incomeName = value || "名");
 bindEditable(el.incomeMoneyLabel, (value) => state.labels.incomeMoney = value || "金额");
 bindEditable(el.incomeTotalLabel, (value) => state.labels.incomeTotal = value || "合计");
-bindEditable(el.expenseNameLabel, (value) => state.labels.expenseName = value || "姓名");
+bindEditable(el.expenseNameLabel, (value) => state.labels.expenseName = value || "名");
 bindEditable(el.expenseMoneyLabel, (value) => state.labels.expenseMoney = value || "金额");
 bindEditable(el.expenseTotalLabel, (value) => state.labels.expenseTotal = value || "合计");
 

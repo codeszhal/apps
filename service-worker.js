@@ -1,4 +1,4 @@
-const CACHE_NAME = "recon-separate-tables-v13-20260630";
+const CACHE_NAME = "recon-separate-tables-v14-20260630";
 
 self.addEventListener("install", event => {
   self.skipWaiting();
@@ -8,7 +8,18 @@ self.addEventListener("install", event => {
       "./index.html",
       "./style.css",
       "./app.js",
-      "./manifest.json"
+      "./manifest.json",
+      "./assets/fonts/AlibabaPuHuiTi-3-55-Regular.ttf",
+      "./assets/fonts/AlibabaPuHuiTi-3-75-SemiBold.ttf",
+      "./assets/icons/check.svg",
+      "./assets/icons/copy.svg",
+      "./assets/icons/download.svg",
+      "./assets/icons/fire.svg",
+      "./assets/icons/plus.svg",
+      "./assets/icons/send.svg",
+      "./assets/icons/snowflake.svg",
+      "./assets/icons/telegram.svg",
+      "./assets/icons/x.svg"
     ]))
   );
 });

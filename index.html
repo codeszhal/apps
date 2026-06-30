@@ -12,11 +12,15 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 </head>
 <body>
+  <div class="page-shell">
   <main class="app">
     <header class="topbar">
       <div>
-        <h1 id="appTitle" contenteditable="true" spellcheck="false">收支核对</h1>
-        <p>目标：收入 - 支出 = 0</p>
+        <div class="title-line">
+          <h1 id="appTitle" contenteditable="true" spellcheck="false">收支核对</h1>
+          <span class="live-badge"><span></span>实时计算</span>
+        </div>
+        <p>三列同屏 · 收入与支出独立管理</p>
       </div>
       <div id="globalStatus" class="status-chip ok">
         <strong id="globalStatusText">成功</strong>
@@ -25,9 +29,9 @@
     </header>
 
     <section class="quickbar">
-      <button id="addIncomeBtn" class="btn primary">＋收入</button>
-      <button id="addExpenseBtn" class="btn cool">＋支出</button>
-      <button id="saveImageBtn" class="btn dark">存图</button>
+      <button class="btn primary" type="button" onclick="document.getElementById('addIncomeBtn').click()">＋收入</button>
+      <button class="btn cool" type="button" onclick="document.getElementById('addExpenseBtn').click()">＋支出</button>
+      <button id="saveImageBtn" class="btn dark icon-text"><img src="assets/icons/download.svg" alt="" />存图</button>
       <button id="compactBtn" class="btn soft">紧凑</button>
     </section>
 
@@ -63,13 +67,15 @@
 
     <section id="incomeTable" class="ledger-card income-card">
       <div class="ledger-title">
-        <strong>收入</strong>
-        <span>热钱进入，尽快流出</span>
+        <strong><img src="assets/icons/fire.svg" alt="" />收入表</strong>
+        <button id="addIncomeBtn" class="mini-add income-add" type="button"><img src="assets/icons/plus.svg" alt="" />添加收入</button>
       </div>
       <div class="ledger-head">
-        <div id="incomeNameLabel" contenteditable="true" spellcheck="false">姓名</div>
-        <div id="incomeMoneyLabel" contenteditable="true" spellcheck="false">金额</div>
+        <div></div>
+        <div id="incomeNameLabel" contenteditable="true" spellcheck="false">名</div>
+        <div id="incomeMoneyLabel" contenteditable="true" spellcheck="false">金额（可输入公式，实时计算）</div>
         <div id="incomeTotalLabel" contenteditable="true" spellcheck="false">合计</div>
+        <div>操作</div>
       </div>
       <div id="incomeRows" class="ledger-rows"></div>
       <footer class="ledger-total">
@@ -80,13 +86,15 @@
 
     <section id="expenseTable" class="ledger-card expense-card">
       <div class="ledger-title">
-        <strong>支出</strong>
-        <span>资金去向，逐笔核对</span>
+        <strong><img src="assets/icons/snowflake.svg" alt="" />支出表</strong>
+        <button id="addExpenseBtn" class="mini-add expense-add" type="button"><img src="assets/icons/plus.svg" alt="" />添加支出</button>
       </div>
       <div class="ledger-head">
-        <div id="expenseNameLabel" contenteditable="true" spellcheck="false">姓名</div>
-        <div id="expenseMoneyLabel" contenteditable="true" spellcheck="false">金额</div>
+        <div></div>
+        <div id="expenseNameLabel" contenteditable="true" spellcheck="false">名</div>
+        <div id="expenseMoneyLabel" contenteditable="true" spellcheck="false">金额（可输入公式，实时计算）</div>
         <div id="expenseTotalLabel" contenteditable="true" spellcheck="false">合计</div>
+        <div>操作</div>
       </div>
       <div id="expenseRows" class="ledger-rows"></div>
       <footer class="ledger-total">
@@ -112,7 +120,7 @@
 
     <section class="telegram-card">
       <div class="section-title">
-        <strong>Telegram 发送</strong>
+        <strong><img src="assets/icons/telegram.svg" alt="" />Telegram 发送</strong>
         <span>选择用户或发送给全部</span>
       </div>
 
@@ -131,9 +139,9 @@
           <input id="telegramToken" type="password" placeholder="输入 Bot Token，不要写进代码" />
         </label>
 
-        <button id="sendSelectedBtn" class="btn primary">发送给选中</button>
-        <button id="sendAllBtn" class="btn dark">发送给全部</button>
-        <button id="copyPayloadBtn" class="btn soft">复制内容</button>
+        <button id="sendSelectedBtn" class="btn primary icon-text"><img src="assets/icons/send.svg" alt="" />发送给选中</button>
+        <button id="sendAllBtn" class="btn dark icon-text"><img src="assets/icons/send.svg" alt="" />发送给全部</button>
+        <button id="copyPayloadBtn" class="btn soft icon-text"><img src="assets/icons/copy.svg" alt="" />复制内容</button>
       </div>
 
       <textarea id="telegramPreview" class="telegram-preview" readonly></textarea>
@@ -144,6 +152,16 @@
       收入与支出是两个独立表格，行数不需要相同。金额栏会保留原文并实时计算；每 2 秒自动复核一次。合计栏只显示计算结果。金额支持：100+20、500-75、12*3、1000/4、100×3、1000÷4。末尾等号、空格、多行都安全。
     </section>
   </main>
+  <aside class="design-panel" aria-hidden="true">
+    <h2>设计说明</h2>
+    <ol>
+      <li><strong>独立表格</strong><span>收入与支出分开展示</span></li>
+      <li><strong>金额列超宽</strong><span>支持多行公式与实时计算</span></li>
+      <li><strong>实时状态</strong><span>有效 / 输入中 / 错误 即时反馈</span></li>
+      <li><strong>紧凑布局</strong><span>适配 iPhone 14 Pro Max PWA</span></li>
+    </ol>
+  </aside>
+  </div>
 
   <dialog id="exprDialog">
     <div class="dialog-card">
