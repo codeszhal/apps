@@ -1,0 +1,11 @@
+{
+  "name": "收支核对",
+  "short_name": "核对",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#0f172a",
+  "description": "三列表格收入支出核对工具，支持 Telegram 发送",
+  "icons": []
+}
