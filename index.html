@@ -16,7 +16,7 @@
     <header class="topbar">
       <div>
         <h1 id="appTitle" contenteditable="true" spellcheck="false">收支核对</h1>
-        <p>三列同屏 · 收入热钱快速流出</p>
+        <p>目标：收入 - 支出 = 0</p>
       </div>
       <div id="globalStatus" class="status-chip ok">
         <strong id="globalStatusText">成功</strong>
@@ -25,9 +25,9 @@
     </header>
 
     <section class="quickbar">
-      <button id="addRowBtn" class="btn primary">＋行</button>
+      <button id="addIncomeBtn" class="btn primary">＋收入</button>
+      <button id="addExpenseBtn" class="btn cool">＋支出</button>
       <button id="saveImageBtn" class="btn dark">存图</button>
-      <button id="modeBtn" class="btn soft">纵向</button>
       <button id="compactBtn" class="btn soft">紧凑</button>
     </section>
 
@@ -45,54 +45,117 @@
     <details class="settings">
       <summary>设置 / 备份</summary>
       <div class="settings-grid">
-        <label class="scale-control"><span>显示大小</span><input id="fontScale" type="range" min="78" max="126" value="100" /></label>
+        <label class="scale-control">
+          <span>显示大小</span>
+          <input id="fontScale" type="range" min="78" max="126" value="100" />
+        </label>
         <button id="backupBtn" class="btn soft">导出备份</button>
-        <label class="btn soft import-btn">导入备份<input id="importBackupInput" type="file" accept="application/json" hidden /></label>
-        <div class="save-state"><span>自动保存</span><strong id="saveState">已保存</strong></div>
+        <label class="btn soft import-btn">
+          导入备份
+          <input id="importBackupInput" type="file" accept="application/json" hidden />
+        </label>
+        <div class="save-state">
+          <span>自动保存</span>
+          <strong id="saveState">已保存</strong>
+        </div>
       </div>
     </details>
 
-    <section id="tableMode" class="table-card">
-      <div class="group-head"><div class="income-title">收入</div><div class="expense-title">支出</div></div>
-      <div class="grid-head">
+    <section id="incomeTable" class="ledger-card income-card">
+      <div class="ledger-title">
+        <strong>收入</strong>
+        <span>热钱进入，尽快流出</span>
+      </div>
+      <div class="ledger-head">
         <div id="incomeNameLabel" contenteditable="true" spellcheck="false">姓名</div>
         <div id="incomeMoneyLabel" contenteditable="true" spellcheck="false">金额</div>
         <div id="incomeTotalLabel" contenteditable="true" spellcheck="false">合计</div>
+      </div>
+      <div id="incomeRows" class="ledger-rows"></div>
+      <footer class="ledger-total">
+        <span>收入合计</span>
+        <strong id="incomeSectionTotal">0</strong>
+      </footer>
+    </section>
+
+    <section id="expenseTable" class="ledger-card expense-card">
+      <div class="ledger-title">
+        <strong>支出</strong>
+        <span>资金去向，逐笔核对</span>
+      </div>
+      <div class="ledger-head">
         <div id="expenseNameLabel" contenteditable="true" spellcheck="false">姓名</div>
         <div id="expenseMoneyLabel" contenteditable="true" spellcheck="false">金额</div>
         <div id="expenseTotalLabel" contenteditable="true" spellcheck="false">合计</div>
       </div>
-      <div id="tableRows" class="table-rows"></div>
-      <footer class="totals">
-        <div><span>收入</span><strong id="totalIncome">0</strong></div>
-        <div><span>支出</span><strong id="totalExpense">0</strong></div>
-        <div id="diffBox"><span>差额</span><strong id="difference">0</strong></div>
+      <div id="expenseRows" class="ledger-rows"></div>
+      <footer class="ledger-total">
+        <span>支出合计</span>
+        <strong id="expenseSectionTotal">0</strong>
       </footer>
     </section>
 
-    <section id="verticalMode" class="vertical-card">
-      <div class="vertical-title"><strong>纵向输入</strong><span>适合手机快速录入</span></div>
-      <div id="verticalRows" class="vertical-rows"></div>
+    <section class="balance-card">
+      <div>
+        <span>收入</span>
+        <strong id="totalIncome">0</strong>
+      </div>
+      <div>
+        <span>支出</span>
+        <strong id="totalExpense">0</strong>
+      </div>
+      <div id="diffBox">
+        <span>差额</span>
+        <strong id="difference">0</strong>
+      </div>
     </section>
 
     <section class="telegram-card">
-      <div class="section-title"><strong>Telegram 发送</strong><span>选择用户或发送给全部</span></div>
+      <div class="section-title">
+        <strong>Telegram 发送</strong>
+        <span>选择用户或发送给全部</span>
+      </div>
+
       <div class="telegram-grid">
-        <label><span>用户</span><select id="telegramUser"><option value="6201817840">Lobeng · 6201817840</option><option value="5817507946">Ocha · 5817507946</option><option value="5137608953">Faisal · 5137608953</option></select></label>
-        <label><span>Bot Token</span><input id="telegramToken" type="password" placeholder="输入 Bot Token，不要写进代码" /></label>
+        <label>
+          <span>用户</span>
+          <select id="telegramUser">
+            <option value="5137608953">Lobeng · 5137608953</option>
+            <option value="5817507946">Ocha · 5817507946</option>
+            <option value="6201817840">Faisal · 6201817840</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Bot Token</span>
+          <input id="telegramToken" type="password" placeholder="输入 Bot Token，不要写进代码" />
+        </label>
+
         <button id="sendSelectedBtn" class="btn primary">发送给选中</button>
         <button id="sendAllBtn" class="btn dark">发送给全部</button>
         <button id="copyPayloadBtn" class="btn soft">复制内容</button>
       </div>
+
       <textarea id="telegramPreview" class="telegram-preview" readonly></textarea>
       <p id="telegramStatus" class="telegram-status">提示：Telegram 用户必须先打开并开始你的 Bot，否则 Bot API 无法主动发送。</p>
     </section>
 
-    <section class="note">金额栏是文本输入，保留原始写法，不会被替换；合计栏只显示计算结果。金额支持：100+20、500-75、12*3、1000/4、100×3、1000÷4。末尾的等号、多空格、多行会自动清理后计算。无法计算时，合计栏显示错误，但保留上一次有效金额。</section>
+    <section class="note">
+      收入与支出是两个独立表格，行数不需要相同。金额栏会保留原文并实时计算；每 2 秒自动复核一次。合计栏只显示计算结果。金额支持：100+20、500-75、12*3、1000/4、100×3、1000÷4。末尾等号、空格、多行都安全。
+    </section>
   </main>
 
-  <dialog id="exprDialog"><div class="dialog-card"><header><h3 id="exprDialogTitle">金额详情</h3><button id="closeExprDialog" class="icon-only">×</button></header><textarea id="exprDialogText" spellcheck="false"></textarea><button id="saveExprDialog" class="btn primary full">保存</button></div></dialog>
-  <dialog id="imageDialog"><div class="dialog-card"><header><h3>凭证图片</h3><button id="closeImageDialog" class="icon-only">×</button></header><img id="previewImage" alt="凭证图片" /></div></dialog>
+  <dialog id="exprDialog">
+    <div class="dialog-card">
+      <header>
+        <h3 id="exprDialogTitle">金额详情</h3>
+        <button id="closeExprDialog" class="icon-only">×</button>
+      </header>
+      <textarea id="exprDialogText" spellcheck="false"></textarea>
+      <button id="saveExprDialog" class="btn primary full">保存</button>
+    </div>
+  </dialog>
+
   <script src="app.js"></script>
 </body>
 </html>

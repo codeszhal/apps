@@ -6,6 +6,6 @@
   "display": "standalone",
   "background_color": "#f4f7fb",
   "theme_color": "#0f172a",
-  "description": "三列表格收入支出核对工具，支持 Telegram 发送",
+  "description": "iPhone PWA 收入支出双表核对工具，目标收入减支出等于零",
   "icons": []
 }
