@@ -277,7 +277,7 @@ h1 {
 .ledger-head,
 .ledger-row {
   display: grid;
-  grid-template-columns: 16% 64% 20%;
+  grid-template-columns: 14% minmax(0, 68%) 18%;
 }
 
 .ledger-head {

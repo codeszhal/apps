@@ -8,40 +8,35 @@ test.beforeEach(async ({ page }) => {
   await page.goto(appUrl);
 });
 
-test("updates calculated columns and totals on every keystroke in table mode", async ({ page }) => {
-  const firstRow = page.locator("#tableRows .row-wrap").first();
-  const incomeInput = firstRow.locator(".money-input").nth(0);
-  const expenseInput = firstRow.locator(".money-input").nth(1);
+test("starts balanced across separate income and expense tables", async ({ page }) => {
+  await expect(page.locator("#totalIncome")).toHaveText("820");
+  await expect(page.locator("#totalExpense")).toHaveText("820");
+  await expect(page.locator("#difference")).toHaveText("0");
+  await expect(page.locator("#globalStatusText")).toHaveText("成功");
+});
 
-  await incomeInput.fill("10+5");
-  await expect(firstRow.locator(".amount-box").nth(0)).toHaveText("15");
+test("updates calculated columns and totals on every keystroke", async ({ page }) => {
+  const firstIncomeRow = page.locator("#incomeRows .entry-wrap").first();
+  const firstExpenseRow = page.locator("#expenseRows .entry-wrap").first();
+
+  await firstIncomeRow.locator(".money-input").fill("10+5");
+  await expect(firstIncomeRow.locator(".amount-box")).toHaveText("15");
   await expect(page.locator("#totalIncome")).toHaveText("715");
 
-  await expenseInput.fill("10");
-  await expect(firstRow.locator(".amount-box").nth(1)).toHaveText("10");
-  await expect(page.locator("#totalExpense")).toHaveText("660");
-  await expect(firstRow.locator(".pill")).toContainText("差");
+  await firstExpenseRow.locator(".money-input").fill("10");
+  await expect(firstExpenseRow.locator(".amount-box")).toHaveText("10");
+  await expect(page.locator("#totalExpense")).toHaveText("710");
+  await expect(page.locator("#difference")).toHaveText("5");
 });
 
-test("updates calculated columns live in vertical mode", async ({ page }) => {
-  await page.locator("#modeBtn").click();
+test("allows income and expense row counts to differ", async ({ page }) => {
+  const incomeCount = await page.locator("#incomeRows .entry-wrap").count();
+  const expenseCount = await page.locator("#expenseRows .entry-wrap").count();
 
-  const firstCard = page.locator("#verticalRows .v-card").first();
-  await firstCard.locator(".money-input").nth(0).fill("30*2");
+  await page.locator("#addIncomeBtn").click();
 
-  await expect(firstCard.locator(".v-result").nth(0)).toHaveText("60");
-  await expect(page.locator("#totalIncome")).toHaveText("760");
-});
-
-test("removes side-send and image buttons from row UI", async ({ page }) => {
-  await expect(page.locator("#tableRows button", { hasText: "发" })).toHaveCount(0);
-  await expect(page.locator("#tableRows button", { hasText: "图" })).toHaveCount(0);
-  await expect(page.locator("#tableRows button", { hasText: "看" })).toHaveCount(0);
-
-  await page.locator("#modeBtn").click();
-  await expect(page.locator("#verticalRows button", { hasText: "发" })).toHaveCount(0);
-  await expect(page.locator("#verticalRows button", { hasText: "图" })).toHaveCount(0);
-  await expect(page.locator("#verticalRows button", { hasText: "看" })).toHaveCount(0);
+  await expect(page.locator("#incomeRows .entry-wrap")).toHaveCount(incomeCount + 1);
+  await expect(page.locator("#expenseRows .entry-wrap")).toHaveCount(expenseCount);
 });
 
 test("uses the requested Telegram contacts", async ({ page }) => {

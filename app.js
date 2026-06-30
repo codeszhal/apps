@@ -6,9 +6,9 @@ const LOCAL_KEY = "recon_separate_tables_state_v13";
 const TOKEN_KEY = "telegram_bot_token_v13";
 
 const TELEGRAM_USERS = [
-  { name: "Lobeng", id: "5137608953" },
+  { name: "Lobeng", id: "6201817840" },
   { name: "Ocha", id: "5817507946" },
-  { name: "Faisal", id: "6201817840" }
+  { name: "Faisal", id: "5137608953" }
 ];
 
 let db = null;
@@ -89,7 +89,7 @@ function defaultState() {
     expenseRows: [
       entry("支付宝", "120"),
       entry("银行卡", "250"),
-      entry("供应商", "400"),
+      entry("供应商", "450"),
       entry("", "")
     ]
   };
