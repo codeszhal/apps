@@ -1,59 +1,91 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" role="img" aria-label="Snowflake">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="-3 -3 30 30" role="img" aria-label="Snowflake">
   <defs>
-    <linearGradient id="ice-stroke" x1="4" x2="20" y1="3" y2="21" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#f8fdff"/>
-      <stop offset=".42" stop-color="#8ee8ff"/>
-      <stop offset="1" stop-color="#38bdf8"/>
-    </linearGradient>
-    <radialGradient id="ice-core" cx="44%" cy="38%" r="70%">
+    <linearGradient id="ice-stroke" x1="4" x2="20" y1="2" y2="22" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#ffffff"/>
-      <stop offset=".45" stop-color="#c7f7ff"/>
-      <stop offset="1" stop-color="#67d9ff"/>
+      <stop offset=".38" stop-color="#9ff3ff"/>
+      <stop offset=".72" stop-color="#4fd4ff"/>
+      <stop offset="1" stop-color="#1d9fe8"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="-5" x2="5" y1="0" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset=".42" stop-color="#ffffff" stop-opacity=".92"/>
+      <stop offset=".62" stop-color="#c9fbff" stop-opacity=".86"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="ice-glow-fill" cx="50%" cy="50%" r="62%">
+      <stop offset="0" stop-color="#dffbff" stop-opacity=".86"/>
+      <stop offset=".48" stop-color="#62d9ff" stop-opacity=".35"/>
+      <stop offset="1" stop-color="#1d9fe8" stop-opacity="0"/>
     </radialGradient>
-    <filter id="ice-glow" x="-35%" y="-35%" width="170%" height="170%">
-      <feGaussianBlur stdDeviation=".85"/>
+    <radialGradient id="ice-core" cx="42%" cy="36%" r="68%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".48" stop-color="#d7fbff"/>
+      <stop offset="1" stop-color="#62d9ff"/>
+    </radialGradient>
+    <filter id="ice-blur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.35"/>
     </filter>
+    <mask id="flake-mask" maskUnits="userSpaceOnUse" x="-3" y="-3" width="30" height="30">
+      <rect x="-3" y="-3" width="30" height="30" fill="#000"/>
+      <path fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" d="M12 2.7v18.6M8.72 4.62 12 6.9l3.28-2.28M8.72 19.38 12 17.1l3.28 2.28M3.95 7.35l16.1 9.3M3.88 11.06l3.62-1.58.36-3.95M16.14 18.47l.36-3.95 3.62-1.58M20.05 7.35l-16.1 9.3M16.14 5.53l.36 3.95 3.62 1.58M3.88 12.94l3.62 1.58.36 3.95"/>
+      <circle cx="12" cy="12" r="3" fill="#fff"/>
+    </mask>
   </defs>
   <style>
-    .flake{transform-box:fill-box;transform-origin:50% 50%;animation:shimmer 4.8s ease-in-out infinite}
-    .halo{animation:halo 4.8s ease-in-out infinite}
-    .spark{transform-box:fill-box;transform-origin:center;animation:sparkle 3.6s ease-in-out infinite}
-    .spark.b{animation-delay:1.2s}
-    .spark.c{animation-delay:2.1s}
-    @keyframes shimmer{
-      0%,100%{opacity:.95;filter:saturate(1)}
-      42%{opacity:1;filter:saturate(1.18)}
-      68%{opacity:.9;filter:saturate(.96)}
+    .halo{transform-box:fill-box;transform-origin:50% 50%;animation:iceGlow 3s ease-in-out infinite}
+    .flake{animation:iceBreath 3s ease-in-out infinite}
+    .sweep{animation:sweep 2.8s ease-in-out infinite}
+    .spark{transform-box:fill-box;transform-origin:center;animation:sparkle 2.6s ease-in-out infinite}
+    .spark.b{animation-delay:.45s}
+    .spark.c{animation-delay:.95s}
+    .spark.d{animation-delay:1.45s}
+    .spark.e{animation-delay:1.9s}
+    @keyframes iceGlow{
+      0%,100%{opacity:.42;transform:scale(.96)}
+      48%{opacity:.72;transform:scale(1.08)}
+      74%{opacity:.5;transform:scale(1)}
     }
-    @keyframes halo{
-      0%,100%{opacity:.34}
-      48%{opacity:.58}
-      74%{opacity:.3}
+    @keyframes iceBreath{
+      0%,100%{opacity:.92}
+      45%{opacity:1}
+      72%{opacity:.88}
+    }
+    @keyframes sweep{
+      0%{opacity:0;transform:translate(-12px,12px) rotate(-28deg)}
+      26%{opacity:.95}
+      54%{opacity:.15;transform:translate(13px,-13px) rotate(-28deg)}
+      100%{opacity:0;transform:translate(13px,-13px) rotate(-28deg)}
     }
     @keyframes sparkle{
-      0%,58%,100%{opacity:0;transform:scale(.55) rotate(0deg)}
-      68%{opacity:1;transform:scale(1) rotate(18deg)}
-      82%{opacity:.18;transform:scale(.78) rotate(34deg)}
+      0%,42%,100%{opacity:.12;transform:scale(.55) rotate(0deg)}
+      54%{opacity:1;transform:scale(1.16) rotate(18deg)}
+      68%{opacity:.34;transform:scale(.78) rotate(36deg)}
     }
     @media (prefers-reduced-motion: reduce){
-      .flake,.halo,.spark{animation:none}
-      .spark{opacity:.55}
+      .halo,.flake,.sweep,.spark{animation:none}
+      .sweep{opacity:.22;transform:translate(2px,-2px) rotate(-28deg)}
+      .spark{opacity:.62}
     }
   </style>
-  <circle class="halo" cx="12" cy="12" r="8.3" fill="#7ddfff" opacity=".34" filter="url(#ice-glow)"/>
-  <g class="flake" fill="none" stroke="url(#ice-stroke)" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M12 3.15v17.7"/>
-    <path d="m8.96 4.98 3.04 2.1 3.04-2.1"/>
-    <path d="m8.96 19.02 3.04-2.1 3.04 2.1"/>
-    <path d="M4.34 7.58 19.66 16.42"/>
-    <path d="m4.28 11.12 3.37-1.48.33-3.67"/>
-    <path d="m16.02 18.03.33-3.67 3.37-1.48"/>
-    <path d="M19.66 7.58 4.34 16.42"/>
-    <path d="m16.02 5.97.33 3.67 3.37 1.48"/>
-    <path d="m4.28 12.88 3.37 1.48.33 3.67"/>
+  <circle class="halo" cx="12" cy="12" r="10.2" fill="url(#ice-glow-fill)" filter="url(#ice-blur)"/>
+  <g class="flake" fill="none" stroke="url(#ice-stroke)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 2.7v18.6"/>
+    <path d="M8.72 4.62 12 6.9l3.28-2.28"/>
+    <path d="M8.72 19.38 12 17.1l3.28 2.28"/>
+    <path d="M3.95 7.35l16.1 9.3"/>
+    <path d="m3.88 11.06 3.62-1.58.36-3.95"/>
+    <path d="m16.14 18.47.36-3.95 3.62-1.58"/>
+    <path d="m20.05 7.35-16.1 9.3"/>
+    <path d="m16.14 5.53.36 3.95 3.62 1.58"/>
+    <path d="m3.88 12.94 3.62 1.58.36 3.95"/>
   </g>
-  <circle cx="12" cy="12" r="2.15" fill="url(#ice-core)"/>
-  <path class="spark" fill="#ffffff" d="M18.55 3.9 19 5.02l1.12.45L19 5.92l-.45 1.12-.45-1.12-1.12-.45 1.12-.45.45-1.12Z"/>
-  <path class="spark b" fill="#d9fbff" d="M4.75 4.8 5.08 5.63l.83.33-.83.33-.33.83-.33-.83-.83-.33.83-.33.33-.83Z"/>
-  <path class="spark c" fill="#ffffff" d="M18.75 18.15 19.1 19l.85.35-.85.35-.35.85-.35-.85-.85-.35.85-.35.35-.85Z"/>
+  <g mask="url(#flake-mask)">
+    <rect class="sweep" x="8.8" y="-4" width="3.4" height="32" fill="url(#shine)" opacity="0"/>
+  </g>
+  <circle cx="12" cy="12" r="2.35" fill="url(#ice-core)"/>
+  <path class="spark" fill="#ffffff" d="M20.1 2.45 20.6 3.7l1.25.5-1.25.5-.5 1.25-.5-1.25-1.25-.5 1.25-.5.5-1.25Z"/>
+  <path class="spark b" fill="#dffbff" d="M3.75 3.5 4.15 4.5l1 .4-1 .4-.4 1-.4-1-1-.4 1-.4.4-1Z"/>
+  <path class="spark c" fill="#ffffff" d="M21.05 18.55 21.48 19.62l1.07.43-1.07.43-.43 1.07-.43-1.07-1.07-.43 1.07-.43.43-1.07Z"/>
+  <path class="spark d" fill="#c9fbff" d="M2.3 17.45 2.62 18.25l.8.32-.8.32-.32.8-.32-.8-.8-.32.8-.32.32-.8Z"/>
+  <circle class="spark e" cx="12" cy=".8" r=".82" fill="#ffffff"/>
 </svg>
