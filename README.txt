@@ -33,3 +33,4 @@ service-worker.js
 Catatan Telegram:
 Bot Token tidak di-hardcode demi keamanan. Tempel token di field Bot Token sekali, lalu tersimpan lokal di browser.
 
+
