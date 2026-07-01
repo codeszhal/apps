@@ -1,19 +1,53 @@
-<!--
-category: Nature
-tags: [fire, fireplace, light, burn, bonfire, smoke, barbecue, flame]
-version: "1.35"
-unicode: "ec2c"
--->
-<svg
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M12 10.941c2.333 -3.308 .167 -7.823 -1 -8.941c0 3.395 -2.235 5.299 -3.667 6.706c-1.43 1.408 -2.333 3.294 -2.333 5.588c0 3.704 3.134 6.706 7 6.706c3.866 0 7 -3.002 7 -6.706c0 -1.712 -1.232 -4.403 -2.333 -5.588c-2.084 3.353 -3.257 3.353 -4.667 2.235" />
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" role="img" aria-label="Fire">
+  <defs>
+    <radialGradient id="fire-glow" cx="50%" cy="66%" r="58%">
+      <stop offset="0" stop-color="#ffd36a" stop-opacity=".72"/>
+      <stop offset=".52" stop-color="#ff7a1a" stop-opacity=".26"/>
+      <stop offset="1" stop-color="#ff2d20" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fire-outer" x1="6" x2="18.5" y1="2.5" y2="21.5" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffd85a"/>
+      <stop offset=".42" stop-color="#ff8617"/>
+      <stop offset=".78" stop-color="#f0441f"/>
+      <stop offset="1" stop-color="#b91c1c"/>
+    </linearGradient>
+    <linearGradient id="fire-inner" x1="9.3" x2="14.9" y1="9.2" y2="20.8" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff7b0"/>
+      <stop offset=".55" stop-color="#ffc247"/>
+      <stop offset="1" stop-color="#ff7a18"/>
+    </linearGradient>
+    <filter id="soft-blur" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation="1.25"/>
+    </filter>
+  </defs>
+  <style>
+    .flame{transform-box:fill-box;transform-origin:50% 82%;animation:flicker 2.8s ease-in-out infinite}
+    .inner{transform-box:fill-box;transform-origin:50% 88%;animation:innerFlicker 2.1s ease-in-out infinite}
+    .glow{animation:glowPulse 2.8s ease-in-out infinite}
+    @keyframes flicker{
+      0%,100%{transform:scale(1) translateX(0)}
+      25%{transform:scale(.98,1.03) translateX(-.15px)}
+      52%{transform:scale(1.02,.99) translateX(.16px)}
+      76%{transform:scale(.99,1.02) translateX(-.08px)}
+    }
+    @keyframes innerFlicker{
+      0%,100%{transform:scale(1);opacity:.95}
+      40%{transform:scale(.93,1.08);opacity:.84}
+      68%{transform:scale(1.06,.96);opacity:1}
+    }
+    @keyframes glowPulse{
+      0%,100%{opacity:.78}
+      45%{opacity:.52}
+      72%{opacity:.88}
+    }
+    @media (prefers-reduced-motion: reduce){
+      .flame,.inner,.glow{animation:none}
+    }
+  </style>
+  <ellipse class="glow" cx="12" cy="14.7" rx="8.3" ry="8.1" fill="url(#fire-glow)" filter="url(#soft-blur)"/>
+  <g class="flame">
+    <path fill="url(#fire-outer)" d="M12.23 21.55c-4.02 0-7.15-2.91-7.15-6.94 0-2.55 1.26-4.71 3.03-6.28 1.52-1.35 2.69-3.01 2.66-5.91 0-.38.45-.58.73-.32 1.74 1.59 3.54 4.66 2.1 7.78 1.37-.25 2.34-1.37 3.27-3.02.18-.32.62-.36.85-.08 1.07 1.3 1.97 3.47 1.97 5.72 0 5.33-3.42 9.05-7.46 9.05Z"/>
+    <path fill="#fff0a3" opacity=".34" d="M10.84 4.53c.4 2.56-.73 4.21-2.21 5.74-1.22 1.26-1.88 2.73-1.88 4.39 0 2.7 1.78 4.76 4.38 5.25-1.47-.96-2.39-2.44-2.39-4.23 0-1.87.83-3.16 1.81-4.27 1.01-1.15 1.78-2.38 1.48-4.28a6.5 6.5 0 0 0-1.19-2.6Z"/>
+    <path class="inner" fill="url(#fire-inner)" d="M12.2 21.43c-2.12 0-3.75-1.51-3.75-3.63 0-1.4.7-2.6 1.74-3.56.83-.77 1.48-1.68 1.46-3.31 0-.32.39-.48.61-.25 1.03 1.08 1.8 2.55 1.1 4.23.78-.16 1.36-.8 1.89-1.72.17-.29.57-.31.78-.06.61.75 1.08 1.95 1.08 3.1 0 3.1-2.2 5.2-4.91 5.2Z"/>
+  </g>
 </svg>

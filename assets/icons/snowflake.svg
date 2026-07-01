@@ -1,30 +1,59 @@
-<!--
-tags: [winter, weather, cold, frost, snowflake, climate, forecast, meteorology, atmospheric, conditions]
-category: Weather
-version: "1.8"
-unicode: "ec0b"
--->
-<svg
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M10 4l2 1l2 -1" />
-  <path d="M12 2v6.5l3 1.72" />
-  <path d="M17.928 6.268l.134 2.232l1.866 1.232" />
-  <path d="M20.66 7l-5.629 3.25l.01 3.458" />
-  <path d="M19.928 14.268l-1.866 1.232l-.134 2.232" />
-  <path d="M20.66 17l-5.629 -3.25l-2.99 1.738" />
-  <path d="M14 20l-2 -1l-2 1" />
-  <path d="M12 22v-6.5l-3 -1.72" />
-  <path d="M6.072 17.732l-.134 -2.232l-1.866 -1.232" />
-  <path d="M3.34 17l5.629 -3.25l-.01 -3.458" />
-  <path d="M4.072 9.732l1.866 -1.232l.134 -2.232" />
-  <path d="M3.34 7l5.629 3.25l2.99 -1.738" />
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" role="img" aria-label="Snowflake">
+  <defs>
+    <linearGradient id="ice-stroke" x1="4" x2="20" y1="3" y2="21" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f8fdff"/>
+      <stop offset=".42" stop-color="#8ee8ff"/>
+      <stop offset="1" stop-color="#38bdf8"/>
+    </linearGradient>
+    <radialGradient id="ice-core" cx="44%" cy="38%" r="70%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".45" stop-color="#c7f7ff"/>
+      <stop offset="1" stop-color="#67d9ff"/>
+    </radialGradient>
+    <filter id="ice-glow" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation=".85"/>
+    </filter>
+  </defs>
+  <style>
+    .flake{transform-box:fill-box;transform-origin:50% 50%;animation:shimmer 4.8s ease-in-out infinite}
+    .halo{animation:halo 4.8s ease-in-out infinite}
+    .spark{transform-box:fill-box;transform-origin:center;animation:sparkle 3.6s ease-in-out infinite}
+    .spark.b{animation-delay:1.2s}
+    .spark.c{animation-delay:2.1s}
+    @keyframes shimmer{
+      0%,100%{opacity:.95;filter:saturate(1)}
+      42%{opacity:1;filter:saturate(1.18)}
+      68%{opacity:.9;filter:saturate(.96)}
+    }
+    @keyframes halo{
+      0%,100%{opacity:.34}
+      48%{opacity:.58}
+      74%{opacity:.3}
+    }
+    @keyframes sparkle{
+      0%,58%,100%{opacity:0;transform:scale(.55) rotate(0deg)}
+      68%{opacity:1;transform:scale(1) rotate(18deg)}
+      82%{opacity:.18;transform:scale(.78) rotate(34deg)}
+    }
+    @media (prefers-reduced-motion: reduce){
+      .flake,.halo,.spark{animation:none}
+      .spark{opacity:.55}
+    }
+  </style>
+  <circle class="halo" cx="12" cy="12" r="8.3" fill="#7ddfff" opacity=".34" filter="url(#ice-glow)"/>
+  <g class="flake" fill="none" stroke="url(#ice-stroke)" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3.15v17.7"/>
+    <path d="m8.96 4.98 3.04 2.1 3.04-2.1"/>
+    <path d="m8.96 19.02 3.04-2.1 3.04 2.1"/>
+    <path d="M4.34 7.58 19.66 16.42"/>
+    <path d="m4.28 11.12 3.37-1.48.33-3.67"/>
+    <path d="m16.02 18.03.33-3.67 3.37-1.48"/>
+    <path d="M19.66 7.58 4.34 16.42"/>
+    <path d="m16.02 5.97.33 3.67 3.37 1.48"/>
+    <path d="m4.28 12.88 3.37 1.48.33 3.67"/>
+  </g>
+  <circle cx="12" cy="12" r="2.15" fill="url(#ice-core)"/>
+  <path class="spark" fill="#ffffff" d="M18.55 3.9 19 5.02l1.12.45L19 5.92l-.45 1.12-.45-1.12-1.12-.45 1.12-.45.45-1.12Z"/>
+  <path class="spark b" fill="#d9fbff" d="M4.75 4.8 5.08 5.63l.83.33-.83.33-.33.83-.33-.83-.83-.33.83-.33.33-.83Z"/>
+  <path class="spark c" fill="#ffffff" d="M18.75 18.15 19.1 19l.85.35-.85.35-.35.85-.35-.85-.85-.35.85-.35.35-.85Z"/>
 </svg>
