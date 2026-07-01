@@ -28,42 +28,31 @@
       </div>
     </header>
 
-    <section class="quickbar">
-      <button class="btn primary" type="button" onclick="document.getElementById('addIncomeBtn').click()">＋收入</button>
-      <button class="btn cool" type="button" onclick="document.getElementById('addExpenseBtn').click()">＋支出</button>
-      <button id="saveImageBtn" class="btn dark icon-text"><img src="assets/icons/download.svg" alt="" />存图</button>
-      <button id="compactBtn" class="btn soft">紧凑</button>
+    <section class="quickbar toolbar-cards" aria-label="Main actions">
+      <label class="toolbar-card language-card">
+        <img src="assets/icons/mobile.svg" alt="" />
+        <span id="languageButtonLabel">中文</span>
+        <select id="languageSelect" aria-label="Language">
+          <option value="中文">中文</option>
+          <option value="English">English</option>
+          <option value="Indonesia">Indonesia</option>
+        </select>
+      </label>
+      <button id="saveImageBtn" class="toolbar-card" type="button">
+        <img src="assets/icons/download.svg" alt="" />
+        <span>保存报表</span>
+      </button>
+      <button id="settingsBtn" class="toolbar-card" type="button">
+        <img src="assets/icons/settings.svg" alt="" />
+        <span>设置</span>
+      </button>
     </section>
 
-    <section id="calcToolbar" class="calc-toolbar" aria-label="金额运算符">
-      <button type="button" data-op="+">＋</button>
-      <button type="button" data-op="-">－</button>
-      <button type="button" data-op="*">×</button>
-      <button type="button" data-op="/">÷</button>
-      <button type="button" data-op="(">(</button>
-      <button type="button" data-op=")">)</button>
-      <button type="button" data-op=".">.</button>
-      <button type="button" id="calcBackspace">⌫</button>
-    </section>
-
-    <details class="settings">
-      <summary>设置 / 备份</summary>
-      <div class="settings-grid">
-        <label class="scale-control">
-          <span>显示大小</span>
-          <input id="fontScale" type="range" min="78" max="126" value="100" />
-        </label>
-        <button id="backupBtn" class="btn soft">导出备份</button>
-        <label class="btn soft import-btn">
-          导入备份
-          <input id="importBackupInput" type="file" accept="application/json" hidden />
-        </label>
-        <div class="save-state">
-          <span>自动保存</span>
-          <strong id="saveState">已保存</strong>
-        </div>
-      </div>
-    </details>
+    <input id="fontScale" type="hidden" value="100" />
+    <div class="save-state visually-hidden" aria-live="polite">
+      <span>自动保存</span>
+      <strong id="saveState">已保存</strong>
+    </div>
 
     <section id="incomeTable" class="ledger-card income-card">
       <div class="ledger-title">
@@ -75,7 +64,6 @@
         <div id="incomeNameLabel" contenteditable="true" spellcheck="false">名</div>
         <div id="incomeMoneyLabel" contenteditable="true" spellcheck="false">金额（可输入公式，实时计算）</div>
         <div id="incomeTotalLabel" contenteditable="true" spellcheck="false">合计</div>
-        <div>操作</div>
       </div>
       <div id="incomeRows" class="ledger-rows"></div>
       <footer class="ledger-total">
@@ -94,7 +82,6 @@
         <div id="expenseNameLabel" contenteditable="true" spellcheck="false">名</div>
         <div id="expenseMoneyLabel" contenteditable="true" spellcheck="false">金额（可输入公式，实时计算）</div>
         <div id="expenseTotalLabel" contenteditable="true" spellcheck="false">合计</div>
-        <div>操作</div>
       </div>
       <div id="expenseRows" class="ledger-rows"></div>
       <footer class="ledger-total">
@@ -136,7 +123,7 @@
 
         <label>
           <span>Bot Token</span>
-          <input id="telegramToken" type="password" placeholder="输入 Bot Token，不要写进代码" />
+          <input id="telegramToken" class="token-field" type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="输入 Bot Token，不要写进代码" />
         </label>
 
         <button id="sendSelectedBtn" class="btn primary icon-text"><img src="assets/icons/send.svg" alt="" />发送给选中</button>
@@ -173,6 +160,83 @@
       <button id="saveExprDialog" class="btn primary full">保存</button>
     </div>
   </dialog>
+
+  <dialog id="settingsDialog" class="settings-dialog">
+    <div class="settings-panel">
+      <aside class="settings-nav" aria-hidden="true">
+        <strong><img src="assets/icons/settings.svg" alt="" />设置</strong>
+        <span class="active">通用</span>
+        <span>显示</span>
+        <span>数据管理</span>
+        <span>导入 / 导出</span>
+      </aside>
+      <section class="settings-content">
+        <header>
+          <h3>设置</h3>
+          <button id="closeSettingsBtn" class="icon-only" type="button">×</button>
+        </header>
+
+        <div class="setting-row">
+          <span>主题模式</span>
+          <div class="segmented" data-setting-group="theme">
+            <button type="button" data-setting="theme" data-value="light">浅色</button>
+            <button type="button" data-setting="theme" data-value="dark">深色</button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span>合计货币</span>
+          <div class="segmented" data-setting-group="currency">
+            <button type="button" data-setting="currency" data-value="Rp">Rp</button>
+            <button type="button" data-setting="currency" data-value="¥">¥</button>
+            <button type="button" data-setting="currency" data-value="$">$</button>
+            <button type="button" data-setting="currency" data-value="USDT">USDT</button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span>数字格式</span>
+          <div class="segmented" data-setting-group="numberFormat">
+            <button type="button" data-setting="numberFormat" data-value="1.000.000">1.000.000</button>
+            <button type="button" data-setting="numberFormat" data-value="1,000,000">1,000,000</button>
+            <button type="button" data-setting="numberFormat" data-value="1000000">1000000</button>
+          </div>
+        </div>
+
+        <label class="setting-row switch-row">
+          <span>紧凑模式</span>
+          <input id="settingsCompact" type="checkbox" />
+        </label>
+
+        <label class="setting-row switch-row">
+          <span>自动保存</span>
+          <input id="settingsAutoSave" type="checkbox" checked />
+        </label>
+
+        <div class="setting-actions">
+          <button id="backupBtn" class="btn soft" type="button">导出</button>
+          <label class="btn soft import-btn">
+            导入
+            <input id="importBackupInput" type="file" accept="application/json" hidden />
+          </label>
+          <button id="resetLocalDataBtn" class="btn danger-outline" type="button">重置本地数据</button>
+          <button id="updateVersionBtn" class="btn soft" type="button">检查更新</button>
+        </div>
+      </section>
+    </div>
+  </dialog>
+
+  <div id="amountActionPopover" class="action-popover" hidden>
+    <button id="deleteRowFromPopover" type="button">
+      <img src="assets/icons/trash.svg" alt="" />
+      删除此行
+    </button>
+  </div>
+
+  <div id="undoSnackbar" class="undo-snackbar" hidden>
+    <span id="undoSnackbarText">金额已清空</span>
+    <button id="undoSnackbarBtn" type="button">撤销</button>
+  </div>
 
   <script src="app.js"></script>
 </body>

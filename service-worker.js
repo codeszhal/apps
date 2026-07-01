@@ -11,14 +11,18 @@ self.addEventListener("install", event => {
       "./manifest.json",
       "./assets/fonts/AlibabaPuHuiTi-3-55-Regular.ttf",
       "./assets/fonts/AlibabaPuHuiTi-3-75-SemiBold.ttf",
+      "./assets/icons/broom.svg",
       "./assets/icons/check.svg",
       "./assets/icons/copy.svg",
       "./assets/icons/download.svg",
       "./assets/icons/fire.svg",
+      "./assets/icons/mobile.svg",
       "./assets/icons/plus.svg",
       "./assets/icons/send.svg",
+      "./assets/icons/settings.svg",
       "./assets/icons/snowflake.svg",
       "./assets/icons/telegram.svg",
+      "./assets/icons/trash.svg",
       "./assets/icons/x.svg"
     ]))
   );

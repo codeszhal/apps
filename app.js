@@ -4,6 +4,7 @@ const STATE_STORE = "state";
 const STATE_KEY = "current";
 const LOCAL_KEY = "recon_separate_tables_state_v13";
 const TOKEN_KEY = "telegram_bot_token_v13";
+const UI_PREFS_KEY = "recon_toolbar_settings_prefs_v1";
 
 const TELEGRAM_USERS = [
   { name: "Lobeng", id: "6201817840" },
@@ -16,6 +17,11 @@ let state = defaultState();
 let saveTimer = null;
 let activeMoneyInput = null;
 let dialogTarget = null;
+let amountActionPressTimer = null;
+let suppressNextAmountClear = false;
+let popoverTarget = null;
+let undoDeletePayload = null;
+let undoSnackbarTimer = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -40,14 +46,27 @@ const el = {
   diffBox: $("diffBox"),
   fontScale: $("fontScale"),
   saveState: $("saveState"),
-  compactBtn: $("compactBtn"),
+  languageSelect: $("languageSelect"),
+  languageButtonLabel: $("languageButtonLabel"),
+  settingsBtn: $("settingsBtn"),
+  settingsDialog: $("settingsDialog"),
+  closeSettingsBtn: $("closeSettingsBtn"),
+  settingsCompact: $("settingsCompact"),
+  settingsAutoSave: $("settingsAutoSave"),
+  resetLocalDataBtn: $("resetLocalDataBtn"),
+  updateVersionBtn: $("updateVersionBtn"),
   telegramUser: $("telegramUser"),
   telegramToken: $("telegramToken"),
   telegramPreview: $("telegramPreview"),
   telegramStatus: $("telegramStatus"),
   exprDialog: $("exprDialog"),
   exprDialogTitle: $("exprDialogTitle"),
-  exprDialogText: $("exprDialogText")
+  exprDialogText: $("exprDialogText"),
+  amountActionPopover: $("amountActionPopover"),
+  deleteRowFromPopover: $("deleteRowFromPopover"),
+  undoSnackbar: $("undoSnackbar"),
+  undoSnackbarText: $("undoSnackbarText"),
+  undoSnackbarBtn: $("undoSnackbarBtn")
 };
 
 function newId() {
@@ -223,6 +242,38 @@ function persistSoon() {
       el.saveState.style.color = "#dc2626";
     }
   }, 120);
+}
+
+function loadUiPrefs() {
+  try {
+    return {
+      language: "中文",
+      theme: "light",
+      currency: "Rp",
+      numberFormat: "1.000.000",
+      autoSave: true,
+      ...(JSON.parse(localStorage.getItem(UI_PREFS_KEY) || "{}"))
+    };
+  } catch (error) {
+    return { language: "中文", theme: "light", currency: "Rp", numberFormat: "1.000.000", autoSave: true };
+  }
+}
+
+function saveUiPrefs(next) {
+  const prefs = { ...loadUiPrefs(), ...next };
+  localStorage.setItem(UI_PREFS_KEY, JSON.stringify(prefs));
+  applyUiPrefs(prefs);
+}
+
+function applyUiPrefs(prefs = loadUiPrefs()) {
+  if (el.languageSelect) el.languageSelect.value = prefs.language || "中文";
+  if (el.languageButtonLabel) el.languageButtonLabel.textContent = prefs.language || "中文";
+  if (el.settingsAutoSave) el.settingsAutoSave.checked = prefs.autoSave !== false;
+  document.body.classList.toggle("theme-dark", prefs.theme === "dark");
+
+  document.querySelectorAll("[data-setting]").forEach((button) => {
+    button.classList.toggle("active", prefs[button.dataset.setting] === button.dataset.value);
+  });
 }
 
 function normalizeFullWidth(value) {
@@ -514,6 +565,9 @@ function moneyEditor(side, index, value) {
         onpaste="setTimeout(() => { adjustTextareaHeight(this); updateEntry('${side}', ${index}, 'expr', this.value); }, 0)"
         onblur="updateEntry('${side}', ${index}, 'expr', this.value)">${escapeHtml(value)}</textarea>
       <span class="inline-status" data-inline-status="${side}-${index}">${inlineStatus(entryData)}</span>
+      <button class="amount-action-btn" type="button" data-side="${side}" data-index="${index}" onclick="clearAmountCell('${side}', ${index})" title="清空金额" aria-label="清空金额">
+        <img src="assets/icons/broom.svg" alt="" />
+      </button>
     </div>
   `;
 }
@@ -544,16 +598,11 @@ function renderLedger(side) {
         <div class="ledger-row">
           <div class="cell index-cell"><span class="row-index">${index + 1}</span></div>
           <div class="cell">
-            <input value="${escapeHtml(item.name)}" placeholder="名"
+            <input value="${escapeHtml(item.name)}" placeholder="名" lang="zh-CN" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next"
               oninput="updateEntry('${side}', ${index}, 'name', this.value)" />
           </div>
           <div class="cell">${moneyEditor(side, index, item.expr)}</div>
           <div class="cell">${amountBox(side, index)}</div>
-          <div class="cell action-cell">
-            <button class="icon-btn danger" onclick="deleteEntry('${side}', ${index})" title="删除">
-              <img src="assets/icons/x.svg" alt="" />
-            </button>
-          </div>
         </div>
         <div class="row-meta">
           <span class="pill ${status.type}" data-status="${side}-${index}">${escapeHtml(status.text)}</span>
@@ -646,8 +695,8 @@ function render() {
   el.expenseNameLabel.textContent = state.labels.expenseName;
   el.expenseMoneyLabel.textContent = state.labels.expenseMoney;
   el.expenseTotalLabel.textContent = state.labels.expenseTotal;
-  el.fontScale.value = state.fontScale;
-  el.compactBtn.textContent = state.compact ? "舒适" : "紧凑";
+  if (el.fontScale) el.fontScale.value = state.fontScale;
+  if (el.settingsCompact) el.settingsCompact.checked = state.compact;
 
   renderLedger("income");
   renderLedger("expense");
@@ -793,6 +842,43 @@ document.addEventListener("pointerdown", (event) => {
   if (button.id === "calcBackspace") backspaceActiveMoneyInput();
 });
 
+document.addEventListener("pointerdown", (event) => {
+  const button = event.target.closest && event.target.closest(".amount-action-btn");
+  if (!button) {
+    if (!event.target.closest?.("#amountActionPopover")) hideActionPopover();
+    return;
+  }
+
+  clearTimeout(amountActionPressTimer);
+  suppressNextAmountClear = false;
+  amountActionPressTimer = setTimeout(() => {
+    suppressNextAmountClear = true;
+    showActionPopover(button);
+  }, 500);
+});
+
+["pointerup", "pointercancel", "pointerleave"].forEach((eventName) => {
+  document.addEventListener(eventName, () => {
+    clearTimeout(amountActionPressTimer);
+  }, true);
+});
+
+el.deleteRowFromPopover.addEventListener("click", () => {
+  if (!popoverTarget) return;
+  const { side, index } = popoverTarget;
+  hideActionPopover();
+  deleteEntryWithUndo(side, index);
+});
+
+el.undoSnackbarBtn.addEventListener("click", () => {
+  if (!undoDeletePayload) return;
+  const { onUndo } = undoDeletePayload;
+  clearTimeout(undoSnackbarTimer);
+  el.undoSnackbar.hidden = true;
+  undoDeletePayload = null;
+  onUndo();
+});
+
 ["input", "change", "keyup", "paste", "blur", "compositionend"].forEach((eventName) => {
   document.addEventListener(eventName, (event) => {
     if (event.target?.classList?.contains("money-editor")) scheduleLiveRecalc();
@@ -830,15 +916,74 @@ $("saveExprDialog").addEventListener("click", () => {
   el.exprDialog.close();
 });
 
-window.deleteEntry = function(side, index) {
-  if (!confirm("删除这一行？")) return;
+window.clearAmountCell = function(side, index) {
+  if (suppressNextAmountClear) {
+    suppressNextAmountClear = false;
+    return;
+  }
 
-  state[`${side}Rows`].splice(index, 1);
-  if (state[`${side}Rows`].length === 0) state[`${side}Rows`].push(entry());
+  const item = state[`${side}Rows`][index];
+  if (!item) return;
 
+  item.expr = "";
+  updateEntryCalculation(item, true);
   persistSoon();
   render();
 };
+
+function hideActionPopover() {
+  if (!el.amountActionPopover) return;
+  el.amountActionPopover.hidden = true;
+  popoverTarget = null;
+}
+
+function showActionPopover(button) {
+  const side = button.dataset.side;
+  const index = Number(button.dataset.index);
+  if (!side || !Number.isFinite(index)) return;
+
+  popoverTarget = { side, index };
+  const rect = button.getBoundingClientRect();
+  el.amountActionPopover.hidden = false;
+  el.amountActionPopover.style.left = `${Math.max(12, Math.min(window.innerWidth - 150, rect.right - 142))}px`;
+  el.amountActionPopover.style.top = `${Math.max(12, rect.bottom + 8)}px`;
+}
+
+function showUndoSnackbar(message, onUndo) {
+  clearTimeout(undoSnackbarTimer);
+  undoDeletePayload = { onUndo };
+  el.undoSnackbarText.textContent = message;
+  el.undoSnackbar.hidden = false;
+  undoSnackbarTimer = setTimeout(() => {
+    el.undoSnackbar.hidden = true;
+    undoDeletePayload = null;
+  }, 5000);
+}
+
+function deleteEntryWithUndo(side, index) {
+  const rows = state[`${side}Rows`];
+  const removed = rows[index];
+  if (!removed) return;
+
+  const snapshot = JSON.parse(JSON.stringify(removed));
+  rows.splice(index, 1);
+  const insertedPlaceholder = rows.length === 0;
+  if (insertedPlaceholder) rows.push(entry());
+
+  persistSoon();
+  render();
+  showUndoSnackbar("行已删除", () => {
+    const currentRows = state[`${side}Rows`];
+    if (insertedPlaceholder && currentRows.length === 1 && !hasValue(currentRows[0].name) && !hasValue(currentRows[0].expr)) {
+      currentRows.splice(0, 1);
+    }
+    currentRows.splice(Math.min(index, currentRows.length), 0, normalizeEntry(snapshot));
+    persistSoon();
+    render();
+  });
+}
+
+window.deleteEntry = deleteEntryWithUndo;
 
 $("addIncomeBtn").addEventListener("click", () => {
   state.incomeRows.push(entry());
@@ -854,17 +999,60 @@ $("addExpenseBtn").addEventListener("click", () => {
   window.scrollTo({ top: document.getElementById("expenseTable").offsetTop + document.getElementById("expenseTable").scrollHeight, behavior: "smooth" });
 });
 
-$("compactBtn").addEventListener("click", () => {
-  state.compact = !state.compact;
+el.languageSelect.addEventListener("change", () => {
+  saveUiPrefs({ language: el.languageSelect.value });
+});
+
+el.settingsBtn.addEventListener("click", () => {
+  applyUiPrefs();
+  el.settingsDialog.showModal();
+});
+
+el.closeSettingsBtn.addEventListener("click", () => {
+  el.settingsDialog.close();
+});
+
+document.querySelectorAll("[data-setting]").forEach((button) => {
+  button.addEventListener("click", () => {
+    saveUiPrefs({ [button.dataset.setting]: button.dataset.value });
+  });
+});
+
+el.settingsCompact.addEventListener("change", () => {
+  state.compact = el.settingsCompact.checked;
   persistSoon();
   render();
 });
 
-el.fontScale.addEventListener("input", () => {
-  state.fontScale = Number(el.fontScale.value);
-  persistSoon();
-  render();
+el.settingsAutoSave.addEventListener("change", () => {
+  saveUiPrefs({ autoSave: el.settingsAutoSave.checked });
 });
+
+el.resetLocalDataBtn.addEventListener("click", () => {
+  el.undoSnackbarText.textContent = "Reset local data is a placeholder";
+  el.undoSnackbar.hidden = false;
+  clearTimeout(undoSnackbarTimer);
+  undoSnackbarTimer = setTimeout(() => {
+    el.undoSnackbar.hidden = true;
+  }, 2400);
+});
+
+el.updateVersionBtn.addEventListener("click", () => {
+  el.undoSnackbarText.textContent = "Version is up to date";
+  el.undoSnackbar.hidden = false;
+  clearTimeout(undoSnackbarTimer);
+  undoSnackbarTimer = setTimeout(() => {
+    el.undoSnackbar.hidden = true;
+  }, 2400);
+});
+
+if (el.fontScale) {
+  el.fontScale.addEventListener("input", () => {
+    state.fontScale = Number(el.fontScale.value);
+    persistSoon();
+    render();
+  });
+}
 
 function bindEditable(element, callback) {
   element.addEventListener("blur", () => {
@@ -1045,15 +1233,24 @@ function drawRoundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-$("saveImageBtn").addEventListener("click", () => {
+function formatImageDate(date = new Date()) {
+  return date.toLocaleDateString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).replace(/\//g, "-");
+}
+
+function saveImageReport() {
   const total = totals();
   const ok = !total.hasError && !total.hasTyping && total.diff === 0;
   const incomeRows = visibleEntries("income");
   const expenseRows = visibleEntries("expense");
   const rowH = 52;
   const width = 1080;
-  const height = 260 + (incomeRows.length + expenseRows.length) * rowH + 170;
+  const height = 285 + (incomeRows.length + expenseRows.length) * rowH + 170;
   const scale = Math.max(2, window.devicePixelRatio || 2);
+  const imageDate = formatImageDate();
 
   const canvas = document.createElement("canvas");
   canvas.width = width * scale;
@@ -1073,6 +1270,10 @@ $("saveImageBtn").addEventListener("click", () => {
   ctx.font = "bold 44px Microsoft YaHei, PingFang SC, Arial";
   ctx.fillText(state.title || "收支核对", 70, 100);
 
+  ctx.fillStyle = "#64748b";
+  ctx.font = "bold 20px Microsoft YaHei, PingFang SC, Arial";
+  ctx.fillText(`日期：${imageDate}`, 70, 130);
+
   ctx.fillStyle = ok ? "#16a34a" : "#dc2626";
   drawRoundRect(ctx, width - 200, 58, 130, 48, 24);
   ctx.fill();
@@ -1081,7 +1282,7 @@ $("saveImageBtn").addEventListener("click", () => {
   ctx.font = "bold 24px Microsoft YaHei, PingFang SC, Arial";
   ctx.fillText(ok ? "成功" : "失败", width - 160, 90);
 
-  let y = 145;
+  let y = 170;
   const drawSection = (title, color, rows) => {
     ctx.fillStyle = color;
     drawRoundRect(ctx, 70, y, 940, 42, 14);
@@ -1151,7 +1352,9 @@ $("saveImageBtn").addEventListener("click", () => {
 
     downloadBlob(blob, filename);
   }, "image/png", .96);
-});
+}
+window.saveImageReport = saveImageReport;
+$("saveImageBtn").addEventListener("click", saveImageReport);
 
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
@@ -1173,6 +1376,7 @@ window.addEventListener("pagehide", () => {
 async function init() {
   state = await loadState();
   el.telegramToken.value = localStorage.getItem(TOKEN_KEY) || "";
+  applyUiPrefs();
   render();
   recalculateEverything();
   setInterval(() => recalculateEverything({ pulse: false }), 2000);
