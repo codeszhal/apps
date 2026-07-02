@@ -15,37 +15,38 @@
   <div class="page-shell">
   <main class="app">
     <header class="topbar">
-      <div>
+      <div class="topbar-copy">
         <div class="title-line">
           <h1 id="appTitle" contenteditable="true" spellcheck="false">收支核对</h1>
           <span class="live-badge"><span></span>实时计算</span>
         </div>
         <p>三列同屏 · 收入与支出独立管理</p>
       </div>
-      <div id="globalStatus" class="status-chip ok">
-        <strong id="globalStatusText">成功</strong>
-        <span id="globalStatusSub">已平衡</span>
-      </div>
+      <section class="quickbar toolbar-cards" aria-label="Main actions">
+        <button id="languageToggleBtn" class="toolbar-card language-card" type="button">
+          <img src="assets/icons/globe.svg" alt="" />
+          <span id="languageButtonLabel">中文</span>
+        </button>
+        <button id="saveImageBtn" class="toolbar-card" type="button">
+          <img src="assets/icons/download.svg" alt="" />
+          <span>保存报表</span>
+        </button>
+        <button id="settingsBtn" class="toolbar-card" type="button">
+          <img src="assets/icons/settings.svg" alt="" />
+          <span>设置</span>
+        </button>
+      </section>
     </header>
 
-    <section class="quickbar toolbar-cards" aria-label="Main actions">
-      <label class="toolbar-card language-card">
-        <img src="assets/icons/mobile.svg" alt="" />
-        <span id="languageButtonLabel">中文</span>
-        <select id="languageSelect" aria-label="Language">
-          <option value="中文">中文</option>
-          <option value="English">English</option>
-          <option value="Indonesia">Indonesia</option>
-        </select>
-      </label>
-      <button id="saveImageBtn" class="toolbar-card" type="button">
-        <img src="assets/icons/download.svg" alt="" />
-        <span>保存报表</span>
-      </button>
-      <button id="settingsBtn" class="toolbar-card" type="button">
-        <img src="assets/icons/settings.svg" alt="" />
-        <span>设置</span>
-      </button>
+    <section id="dailyStatus" class="daily-status draft" aria-live="polite">
+      <div class="daily-status-main">
+        <span class="daily-status-dot"></span>
+        <div>
+          <strong id="dailyStatusText">未保存变更</strong>
+          <span id="dailyStatusSub">修改尚未保存到图片</span>
+        </div>
+      </div>
+      <button id="dailyTelegramCta" class="daily-status-cta" type="button" hidden>发送 Telegram</button>
     </section>
 
     <input id="fontScale" type="hidden" value="100" />
@@ -53,6 +54,21 @@
       <span>自动保存</span>
       <strong id="saveState">已保存</strong>
     </div>
+
+    <section class="balance-card">
+      <div>
+        <span>收入</span>
+        <strong id="totalIncome">0</strong>
+      </div>
+      <div>
+        <span>支出</span>
+        <strong id="totalExpense">0</strong>
+      </div>
+      <div id="diffBox">
+        <span>差额</span>
+        <strong id="difference">0</strong>
+      </div>
+    </section>
 
     <section id="incomeTable" class="ledger-card income-card">
       <div class="ledger-title">
@@ -88,21 +104,6 @@
         <span>支出合计</span>
         <strong id="expenseSectionTotal">0</strong>
       </footer>
-    </section>
-
-    <section class="balance-card">
-      <div>
-        <span>收入</span>
-        <strong id="totalIncome">0</strong>
-      </div>
-      <div>
-        <span>支出</span>
-        <strong id="totalExpense">0</strong>
-      </div>
-      <div id="diffBox">
-        <span>差额</span>
-        <strong id="difference">0</strong>
-      </div>
     </section>
 
     <section class="telegram-card">

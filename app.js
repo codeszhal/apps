@@ -5,6 +5,7 @@ const STATE_KEY = "current";
 const LOCAL_KEY = "recon_separate_tables_state_v13";
 const TOKEN_KEY = "telegram_bot_token_v13";
 const UI_PREFS_KEY = "recon_toolbar_settings_prefs_v1";
+const REPORT_STATUS_KEY = "recon_report_delivery_status_v1";
 
 const TELEGRAM_USERS = [
   { name: "Lobeng", id: "6201817840" },
@@ -27,9 +28,10 @@ const $ = (id) => document.getElementById(id);
 
 const el = {
   appTitle: $("appTitle"),
-  globalStatus: $("globalStatus"),
-  globalStatusText: $("globalStatusText"),
-  globalStatusSub: $("globalStatusSub"),
+  dailyStatus: $("dailyStatus"),
+  dailyStatusText: $("dailyStatusText"),
+  dailyStatusSub: $("dailyStatusSub"),
+  dailyTelegramCta: $("dailyTelegramCta"),
   incomeNameLabel: $("incomeNameLabel"),
   incomeMoneyLabel: $("incomeMoneyLabel"),
   incomeTotalLabel: $("incomeTotalLabel"),
@@ -46,7 +48,7 @@ const el = {
   diffBox: $("diffBox"),
   fontScale: $("fontScale"),
   saveState: $("saveState"),
-  languageSelect: $("languageSelect"),
+  languageToggleBtn: $("languageToggleBtn"),
   languageButtonLabel: $("languageButtonLabel"),
   settingsBtn: $("settingsBtn"),
   settingsDialog: $("settingsDialog"),
@@ -265,9 +267,83 @@ function saveUiPrefs(next) {
   applyUiPrefs(prefs);
 }
 
+function reportStatusDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function reportSignature() {
+  return JSON.stringify({
+    title: state.title,
+    labels: state.labels,
+    incomeRows: state.incomeRows.map((item) => ({
+      name: item.name,
+      expr: item.expr,
+      amount: item.amount,
+      state: item.state
+    })),
+    expenseRows: state.expenseRows.map((item) => ({
+      name: item.name,
+      expr: item.expr,
+      amount: item.amount,
+      state: item.state
+    })),
+    totals: totals()
+  });
+}
+
+function loadReportStatus() {
+  try {
+    return {
+      date: reportStatusDate(),
+      savedSignature: "",
+      telegramSignature: "",
+      ...(JSON.parse(localStorage.getItem(REPORT_STATUS_KEY) || "{}"))
+    };
+  } catch (error) {
+    return { date: reportStatusDate(), savedSignature: "", telegramSignature: "" };
+  }
+}
+
+function saveReportStatus(next) {
+  const payload = { ...loadReportStatus(), date: reportStatusDate(), ...next };
+  localStorage.setItem(REPORT_STATUS_KEY, JSON.stringify(payload));
+  updateDailyStatus();
+}
+
+function updateDailyStatus() {
+  if (!el.dailyStatus) return;
+
+  const currentSignature = reportSignature();
+  const status = loadReportStatus();
+  const isToday = status.date === reportStatusDate();
+  const imageSaved = isToday && status.savedSignature === currentSignature;
+  const telegramSent = imageSaved && status.telegramSignature === currentSignature;
+
+  if (!imageSaved) {
+    el.dailyStatus.className = "daily-status draft";
+    el.dailyStatusText.textContent = "未保存变更";
+    el.dailyStatusSub.textContent = "修改尚未保存到图片";
+    el.dailyTelegramCta.hidden = true;
+    return;
+  }
+
+  if (!telegramSent) {
+    el.dailyStatus.className = "daily-status pending";
+    el.dailyStatusText.textContent = "图片已保存，未发送 Telegram";
+    el.dailyStatusSub.textContent = "尚未发送至 Telegram";
+    el.dailyTelegramCta.hidden = false;
+    return;
+  }
+
+  el.dailyStatus.className = "daily-status sent";
+  el.dailyStatusText.textContent = "已发送 Telegram";
+  el.dailyStatusSub.textContent = "图片已保存并已发送";
+  el.dailyTelegramCta.hidden = true;
+}
+
 function applyUiPrefs(prefs = loadUiPrefs()) {
-  if (el.languageSelect) el.languageSelect.value = prefs.language || "中文";
-  if (el.languageButtonLabel) el.languageButtonLabel.textContent = prefs.language || "中文";
+  const language = prefs.language === "English" ? "English" : "中文";
+  if (el.languageButtonLabel) el.languageButtonLabel.textContent = language;
   if (el.settingsAutoSave) el.settingsAutoSave.checked = prefs.autoSave !== false;
   document.body.classList.toggle("theme-dark", prefs.theme === "dark");
 
@@ -654,34 +730,22 @@ function renderTotals() {
   el.expenseSectionTotal.textContent = formatMoney(total.expense);
   el.totalIncome.textContent = formatMoney(total.income);
   el.totalExpense.textContent = formatMoney(total.expense);
-  el.difference.textContent = formatMoney(total.diff);
+  el.difference.textContent = total.diff > 0 ? `+${formatMoney(total.diff)}` : formatMoney(total.diff);
 
   let cls = "ok";
-  let text = "成功";
-  let sub = "已平衡";
 
   if (total.hasError) {
     cls = "bad";
-    text = "失败";
-    sub = "金额错误";
   } else if (total.hasTyping) {
     cls = "wait";
-    text = "输入中";
-    sub = "实时计算";
   } else if (allEmpty) {
     cls = "wait";
-    text = "待输入";
-    sub = "请填写";
   } else if (total.diff !== 0) {
     cls = "bad";
-    text = "失败";
-    sub = `差 ${formatMoney(total.diff)}`;
   }
 
-  el.globalStatus.className = `status-chip ${cls}`;
-  el.globalStatusText.textContent = text;
-  el.globalStatusSub.textContent = sub;
-  el.diffBox.className = cls;
+  el.diffBox.className = total.diff > 0 ? "positive" : total.diff < 0 ? "negative" : cls;
+  updateDailyStatus();
 }
 
 function render() {
@@ -989,18 +1053,17 @@ $("addIncomeBtn").addEventListener("click", () => {
   state.incomeRows.push(entry());
   persistSoon();
   render();
-  window.scrollTo({ top: document.getElementById("incomeTable").offsetTop + document.getElementById("incomeTable").scrollHeight, behavior: "smooth" });
 });
 
 $("addExpenseBtn").addEventListener("click", () => {
   state.expenseRows.push(entry());
   persistSoon();
   render();
-  window.scrollTo({ top: document.getElementById("expenseTable").offsetTop + document.getElementById("expenseTable").scrollHeight, behavior: "smooth" });
 });
 
-el.languageSelect.addEventListener("change", () => {
-  saveUiPrefs({ language: el.languageSelect.value });
+el.languageToggleBtn.addEventListener("click", () => {
+  const current = loadUiPrefs().language === "English" ? "English" : "中文";
+  saveUiPrefs({ language: current === "中文" ? "English" : "中文" });
 });
 
 el.settingsBtn.addEventListener("click", () => {
@@ -1199,6 +1262,11 @@ async function sendTelegram(chatIds, htmlPayload) {
   }
 
   el.telegramStatus.textContent = `发送完成：成功 ${ok}，失败 ${failed}`;
+  if (ok > 0 && failed === 0 && htmlPayload === buildAllPayload()) {
+    saveReportStatus({ telegramSignature: reportSignature() });
+  } else {
+    updateDailyStatus();
+  }
 }
 
 window.sendEntry = function(side, index) {
@@ -1211,6 +1279,10 @@ $("sendSelectedBtn").addEventListener("click", () => {
 
 $("sendAllBtn").addEventListener("click", () => {
   sendTelegram(allTelegramUserIds(), buildAllPayload());
+});
+
+el.dailyTelegramCta.addEventListener("click", () => {
+  sendTelegram(selectedTelegramUserIds(), buildAllPayload());
 });
 
 $("copyPayloadBtn").addEventListener("click", async () => {
@@ -1342,15 +1414,18 @@ function saveImageReport() {
     if (!blob) return alert("保存图片失败。");
     const filename = `收支核对-${new Date().toISOString().slice(0, 10)}.png`;
     const file = new File([blob], filename, { type: "image/png" });
+    const savedSignature = reportSignature();
 
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
         await navigator.share({ files: [file], title: "收支核对" });
+        saveReportStatus({ savedSignature, telegramSignature: "" });
         return;
       } catch (error) {}
     }
 
     downloadBlob(blob, filename);
+    saveReportStatus({ savedSignature, telegramSignature: "" });
   }, "image/png", .96);
 }
 window.saveImageReport = saveImageReport;
