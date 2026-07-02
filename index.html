@@ -127,9 +127,27 @@
           <input id="telegramToken" class="token-field" type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="输入 Bot Token，不要写进代码" />
         </label>
 
-        <button id="sendSelectedBtn" class="btn primary icon-text"><img src="assets/icons/send.svg" alt="" />发送给选中</button>
-        <button id="sendAllBtn" class="btn dark icon-text"><img src="assets/icons/send.svg" alt="" />发送给全部</button>
-        <button id="copyPayloadBtn" class="btn soft icon-text"><img src="assets/icons/copy.svg" alt="" />复制内容</button>
+        <button id="sendSelectedBtn" class="btn primary icon-text telegram-action-btn" type="button">
+          <img src="assets/icons/send.svg" alt="" />
+          <span class="btn-copy">
+            <strong>发送给选中用户</strong>
+            <small>仅发送给所选用户</small>
+          </span>
+        </button>
+        <button id="sendAllBtn" class="btn dark icon-text telegram-action-btn broadcast-btn" type="button">
+          <img src="assets/icons/send.svg" alt="" />
+          <span class="btn-copy">
+            <strong id="sendAllLabel">发送给全部</strong>
+            <small id="sendAllSubLabel">发送给全部用户</small>
+          </span>
+        </button>
+        <button id="copyPayloadBtn" class="btn soft icon-text copy-action-btn" type="button">
+          <img src="assets/icons/copy.svg" alt="" />
+          <span class="btn-copy">
+            <strong>复制内容</strong>
+            <small>复制到剪贴板</small>
+          </span>
+        </button>
       </div>
 
       <textarea id="telegramPreview" class="telegram-preview" readonly></textarea>
@@ -224,6 +242,23 @@
           <button id="updateVersionBtn" class="btn soft" type="button">检查更新</button>
         </div>
       </section>
+    </div>
+  </dialog>
+
+  <dialog id="broadcastConfirmDialog" class="confirm-dialog">
+    <div class="confirm-card">
+      <header>
+        <strong>发送给全部用户</strong>
+        <button id="closeBroadcastConfirm" class="icon-only" type="button">×</button>
+      </header>
+      <p id="broadcastConfirmText">你将把这条消息发送给全部 Telegram 用户。</p>
+      <div class="confirm-actions">
+        <button id="cancelBroadcastBtn" class="btn soft" type="button">取消</button>
+        <button id="confirmBroadcastBtn" class="btn danger-confirm icon-text" type="button">
+          <img src="assets/icons/send.svg" alt="" />
+          确认发送
+        </button>
+      </div>
     </div>
   </dialog>
 

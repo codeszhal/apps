@@ -57,6 +57,15 @@ const el = {
   settingsAutoSave: $("settingsAutoSave"),
   resetLocalDataBtn: $("resetLocalDataBtn"),
   updateVersionBtn: $("updateVersionBtn"),
+  sendSelectedBtn: $("sendSelectedBtn"),
+  sendAllBtn: $("sendAllBtn"),
+  sendAllLabel: $("sendAllLabel"),
+  sendAllSubLabel: $("sendAllSubLabel"),
+  broadcastConfirmDialog: $("broadcastConfirmDialog"),
+  broadcastConfirmText: $("broadcastConfirmText"),
+  closeBroadcastConfirm: $("closeBroadcastConfirm"),
+  cancelBroadcastBtn: $("cancelBroadcastBtn"),
+  confirmBroadcastBtn: $("confirmBroadcastBtn"),
   telegramUser: $("telegramUser"),
   telegramToken: $("telegramToken"),
   telegramPreview: $("telegramPreview"),
@@ -592,6 +601,17 @@ function formatMoney(value) {
   return Number(value || 0).toLocaleString("zh-CN", { maximumFractionDigits: 2 });
 }
 
+function currencyPrefix() {
+  const currency = loadUiPrefs().currency || "Rp";
+  return currency === "USDT" ? "USDT" : currency;
+}
+
+function formatMoneyWithCurrency(value, { signed = false } = {}) {
+  const number = Number(value || 0);
+  const sign = signed && number > 0 ? "+" : "";
+  return `${sign}${currencyPrefix()} ${formatMoney(number)}`;
+}
+
 function entryStatus(entryData) {
   if (entryData.state === "error") return { type: "bad", text: "金额错误" };
   if (entryData.state === "typing") return { type: "typing", text: "输入中..." };
@@ -726,11 +746,11 @@ function renderTotals() {
     state.incomeRows.every((item) => !hasValue(item.name) && !hasValue(item.expr)) &&
     state.expenseRows.every((item) => !hasValue(item.name) && !hasValue(item.expr));
 
-  el.incomeSectionTotal.textContent = formatMoney(total.income);
-  el.expenseSectionTotal.textContent = formatMoney(total.expense);
-  el.totalIncome.textContent = formatMoney(total.income);
-  el.totalExpense.textContent = formatMoney(total.expense);
-  el.difference.textContent = total.diff > 0 ? `+${formatMoney(total.diff)}` : formatMoney(total.diff);
+  el.incomeSectionTotal.textContent = formatMoneyWithCurrency(total.income);
+  el.expenseSectionTotal.textContent = formatMoneyWithCurrency(total.expense);
+  el.totalIncome.textContent = formatMoneyWithCurrency(total.income);
+  el.totalExpense.textContent = formatMoneyWithCurrency(total.expense);
+  el.difference.textContent = formatMoneyWithCurrency(total.diff, { signed: true });
 
   let cls = "ok";
 
@@ -766,6 +786,7 @@ function render() {
   renderLedger("expense");
   renderTotals();
   updateTelegramPreview();
+  updateBroadcastButtonLabel();
 }
 
 window.updateEntry = function(side, index, field, value) {
@@ -1078,6 +1099,7 @@ el.closeSettingsBtn.addEventListener("click", () => {
 document.querySelectorAll("[data-setting]").forEach((button) => {
   button.addEventListener("click", () => {
     saveUiPrefs({ [button.dataset.setting]: button.dataset.value });
+    if (button.dataset.setting === "currency") renderTotals();
   });
 });
 
@@ -1219,7 +1241,76 @@ function allTelegramUserIds() {
   return TELEGRAM_USERS.map((user) => user.id);
 }
 
-async function sendTelegram(chatIds, htmlPayload) {
+function updateBroadcastButtonLabel() {
+  const count = allTelegramUserIds().length;
+  if (el.sendAllLabel) el.sendAllLabel.textContent = `发送给全部 (${count})`;
+  if (el.sendAllSubLabel) el.sendAllSubLabel.textContent = `发送给 ${count} 位用户`;
+  if (el.broadcastConfirmText) {
+    el.broadcastConfirmText.textContent = `你将把这条消息发送给 ${count} 位 Telegram 用户。此操作无法撤销，确定要继续吗？`;
+  }
+}
+
+function setTelegramButtonState(button, stateName, detail = {}) {
+  if (!button) return;
+  const strong = button.querySelector(".btn-copy strong");
+  const small = button.querySelector(".btn-copy small");
+  const img = button.querySelector("img");
+
+  button.classList.remove("is-loading", "is-success", "is-failed");
+  button.disabled = stateName === "loading";
+
+  if (stateName === "loading") {
+    button.classList.add("is-loading");
+    if (strong) strong.textContent = "发送中...";
+    if (small) small.textContent = `${detail.sent || 0} / ${detail.total || 0} 已发送`;
+    if (img) img.src = "assets/icons/settings.svg";
+    return;
+  }
+
+  if (stateName === "success") {
+    button.classList.add("is-success");
+    if (strong) strong.textContent = "发送成功";
+    if (small) small.textContent = `${detail.sent || 0} / ${detail.total || 0} 已发送`;
+    if (img) img.src = "assets/icons/check.svg";
+    setTimeout(() => resetTelegramButtons(), 1800);
+    return;
+  }
+
+  if (stateName === "failed") {
+    button.classList.add("is-failed");
+    if (strong) strong.textContent = "发送失败";
+    if (small) small.textContent = `${detail.failed || 0} / ${detail.total || 0} 发送失败 · 点击重试`;
+    if (img) img.src = "assets/icons/x.svg";
+    setTimeout(() => resetTelegramButtons(), 2600);
+    return;
+  }
+
+  resetTelegramButtons();
+}
+
+function resetTelegramButtons() {
+  if (el.sendSelectedBtn) {
+    el.sendSelectedBtn.classList.remove("is-loading", "is-success", "is-failed");
+    el.sendSelectedBtn.disabled = false;
+    const img = el.sendSelectedBtn.querySelector("img");
+    const strong = el.sendSelectedBtn.querySelector(".btn-copy strong");
+    const small = el.sendSelectedBtn.querySelector(".btn-copy small");
+    if (img) img.src = "assets/icons/send.svg";
+    if (strong) strong.textContent = "发送给选中用户";
+    if (small) small.textContent = "仅发送给所选用户";
+  }
+
+  if (el.sendAllBtn) {
+    el.sendAllBtn.classList.remove("is-loading", "is-success", "is-failed");
+    el.sendAllBtn.disabled = false;
+    const img = el.sendAllBtn.querySelector("img");
+    if (img) img.src = "assets/icons/send.svg";
+  }
+
+  updateBroadcastButtonLabel();
+}
+
+async function sendTelegram(chatIds, htmlPayload, uiButton = null) {
   const token = el.telegramToken.value.trim();
   localStorage.setItem(TOKEN_KEY, token);
 
@@ -1235,6 +1326,7 @@ async function sendTelegram(chatIds, htmlPayload) {
   }
 
   el.telegramStatus.textContent = "发送中…";
+  setTelegramButtonState(uiButton, "loading", { sent: 0, total: chatIds.length });
 
   let ok = 0;
   let failed = 0;
@@ -1259,9 +1351,17 @@ async function sendTelegram(chatIds, htmlPayload) {
     } catch (error) {
       failed++;
     }
+
+    setTelegramButtonState(uiButton, "loading", { sent: ok, total: chatIds.length });
   }
 
   el.telegramStatus.textContent = `发送完成：成功 ${ok}，失败 ${failed}`;
+  setTelegramButtonState(
+    uiButton,
+    failed === 0 && ok > 0 ? "success" : "failed",
+    { sent: ok, failed, total: chatIds.length }
+  );
+
   if (ok > 0 && failed === 0 && htmlPayload === buildAllPayload()) {
     saveReportStatus({ telegramSignature: reportSignature() });
   } else {
@@ -1274,11 +1374,25 @@ window.sendEntry = function(side, index) {
 };
 
 $("sendSelectedBtn").addEventListener("click", () => {
-  sendTelegram(selectedTelegramUserIds(), buildAllPayload());
+  sendTelegram(selectedTelegramUserIds(), buildAllPayload(), el.sendSelectedBtn);
 });
 
 $("sendAllBtn").addEventListener("click", () => {
-  sendTelegram(allTelegramUserIds(), buildAllPayload());
+  updateBroadcastButtonLabel();
+  el.broadcastConfirmDialog.showModal();
+});
+
+el.closeBroadcastConfirm.addEventListener("click", () => {
+  el.broadcastConfirmDialog.close();
+});
+
+el.cancelBroadcastBtn.addEventListener("click", () => {
+  el.broadcastConfirmDialog.close();
+});
+
+el.confirmBroadcastBtn.addEventListener("click", () => {
+  el.broadcastConfirmDialog.close();
+  sendTelegram(allTelegramUserIds(), buildAllPayload(), el.sendAllBtn);
 });
 
 el.dailyTelegramCta.addEventListener("click", () => {
