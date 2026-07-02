@@ -23,15 +23,20 @@ let suppressNextAmountClear = false;
 let popoverTarget = null;
 let undoDeletePayload = null;
 let undoSnackbarTimer = null;
+let dismissedReminderKey = "";
+let lastSavedImageUrl = "";
 
 const $ = (id) => document.getElementById(id);
+const qs = (selector) => document.querySelector(selector);
 
 const el = {
   appTitle: $("appTitle"),
   dailyStatus: $("dailyStatus"),
+  dailyStatusIcon: $("dailyStatusIcon"),
   dailyStatusText: $("dailyStatusText"),
   dailyStatusSub: $("dailyStatusSub"),
   dailyTelegramCta: $("dailyTelegramCta"),
+  dailyStatusDismiss: $("dailyStatusDismiss"),
   incomeNameLabel: $("incomeNameLabel"),
   incomeMoneyLabel: $("incomeMoneyLabel"),
   incomeTotalLabel: $("incomeTotalLabel"),
@@ -57,6 +62,15 @@ const el = {
   settingsAutoSave: $("settingsAutoSave"),
   resetLocalDataBtn: $("resetLocalDataBtn"),
   updateVersionBtn: $("updateVersionBtn"),
+  settingsLanguageValue: $("settingsLanguageValue"),
+  transferDeviceBtn: $("transferDeviceBtn"),
+  transferDialog: $("transferDialog"),
+  closeTransferDialog: $("closeTransferDialog"),
+  transferCodeOutput: $("transferCodeOutput"),
+  transferCodeInput: $("transferCodeInput"),
+  copyTransferCodeBtn: $("copyTransferCodeBtn"),
+  importTransferCodeBtn: $("importTransferCodeBtn"),
+  transferStatus: $("transferStatus"),
   sendSelectedBtn: $("sendSelectedBtn"),
   sendAllBtn: $("sendAllBtn"),
   sendAllLabel: $("sendAllLabel"),
@@ -78,6 +92,315 @@ const el = {
   undoSnackbar: $("undoSnackbar"),
   undoSnackbarText: $("undoSnackbarText"),
   undoSnackbarBtn: $("undoSnackbarBtn")
+};
+
+const DEFAULT_LABELS = {
+  "中文": {
+    appTitle: "收支核对",
+    incomeName: "名",
+    incomeMoney: "金额",
+    incomeTotal: "合计",
+    expenseName: "名",
+    expenseMoney: "金额",
+    expenseTotal: "合计"
+  },
+  English: {
+    appTitle: "Reconcile",
+    incomeName: "Name",
+    incomeMoney: "Amount",
+    incomeTotal: "Total",
+    expenseName: "Name",
+    expenseMoney: "Amount",
+    expenseTotal: "Total"
+  }
+};
+
+const DEFAULT_LABEL_ALIASES = {
+  incomeName: ["姓名"],
+  incomeMoney: ["金额（可输入公式，实时计算）"],
+  expenseName: ["姓名"],
+  expenseMoney: ["金额（可输入公式，实时计算）"]
+};
+
+const UI_TEXT = {
+  "中文": {
+    documentTitle: "收支核对",
+    live: "实时计算",
+    subtitle: "三列同屏 · 收入与支出独立管理",
+    saveReport: "保存报表",
+    settings: "设置",
+    sendTelegram: "发送 Telegram",
+    autoSaveLabel: "自动保存",
+    saved: "已保存",
+    saving: "保存中…",
+    saveFailed: "保存失败",
+    summaryIncome: "收入",
+    summaryExpense: "支出",
+    summaryDiff: "差额",
+    incomeTable: "收入表",
+    expenseTable: "支出表",
+    addIncome: "添加收入",
+    addExpense: "添加支出",
+    incomeTotal: "收入合计",
+    expenseTotal: "支出合计",
+    telegramTitle: "Telegram 发送",
+    telegramHint: "选择用户或发送给全部",
+    telegramUser: "用户",
+    tokenPlaceholder: "输入 Bot Token，不要写进代码",
+    sendSelected: "发送给选中用户",
+    sendSelectedSub: "仅发送给所选用户",
+    sendAll: "发送给全部",
+    sendAllCount: "发送给全部 ({count})",
+    sendAllSub: "发送给 {count} 位用户",
+    copyContent: "复制内容",
+    copyContentSub: "复制到剪贴板",
+    telegramNote: "提示：Telegram 用户必须先打开并开始你的 Bot，否则 Bot API 无法主动发送。",
+    appNote: "收入与支出是两个独立表格，行数不需要相同。金额栏会保留原文并实时计算；每 2 秒自动复核一次。合计栏只显示计算结果。金额支持：100+20、500-75、12*3、1000/4、100×3、1000÷4。末尾等号、空格、多行都安全。",
+    designTitle: "设计说明",
+    design1Title: "独立表格",
+    design1Text: "收入与支出分开展示",
+    design2Title: "金额列超宽",
+    design2Text: "支持多行公式与实时计算",
+    design3Title: "实时状态",
+    design3Text: "有效 / 输入中 / 错误 即时反馈",
+    design4Title: "紧凑布局",
+    design4Text: "适配 iPhone 14 Pro Max PWA",
+    exprTitle: "金额详情",
+    save: "保存",
+    settingsSubtitle: "偏好、数据与设备迁移",
+    appearance: "外观",
+    themeMode: "主题模式",
+    themeModeSub: "切换浅色或深色界面",
+    light: "浅色",
+    dark: "深色",
+    compactMode: "紧凑模式",
+    compactModeSub: "在手机屏幕显示更多内容",
+    localization: "本地化",
+    language: "语言 / Language",
+    languageSub: "顶部按钮可快速切换",
+    totalCurrency: "合计货币",
+    totalCurrencySub: "用于总金额显示",
+    data: "数据",
+    importData: "导入数据",
+    importDataSub: "从 JSON 文件导入数据",
+    exportData: "导出数据",
+    exportDataSub: "导出为 JSON 文件",
+    transferDevice: "转移到新设备",
+    transferDeviceSub: "复制或导入一次性迁移码",
+    autoSaveSub: "编辑后自动保存本地数据",
+    about: "关于",
+    version: "版本",
+    versionSub: "PWA 本地应用",
+    checkUpdate: "检查更新",
+    checkUpdateSub: "确认当前是否为最新版本",
+    advanced: "高级",
+    resetData: "重置本地数据",
+    resetDataSub: "清除本机保存的数据，无法恢复",
+    transferTitle: "转移到新设备",
+    transferSubtitle: "用迁移码把当前数据复制到另一台设备",
+    oldDevice: "旧设备：生成迁移码",
+    oldDeviceSub: "复制下方代码，在新设备中粘贴导入。",
+    copyTransfer: "复制迁移码",
+    newDevice: "新设备：导入迁移码",
+    newDeviceSub: "粘贴旧设备生成的迁移码，然后导入。",
+    transferPlaceholder: "粘贴迁移码",
+    importTransfer: "导入到此设备",
+    transferStatusDefault: "迁移码包含当前账单与偏好设置。请只发送给你信任的设备。",
+    broadcastTitle: "发送给全部用户",
+    broadcastText: "你将把这条消息发送给 {count} 位 Telegram 用户。此操作无法撤销，确定要继续吗？",
+    cancel: "取消",
+    confirmSend: "确认发送",
+    deleteRow: "删除此行",
+    undo: "撤销",
+    reminderUnsavedTitle: "尚未保存",
+    reminderUnsavedSub: "保存为图片，避免数据丢失。",
+    reminderSavedTitle: "已保存",
+    reminderSavedSub: "上次保存于 {time}",
+    reminderModifiedTitle: "检测到修改",
+    reminderModifiedSub: "再次保存，让数据保持安全。",
+    reminderSaveAction: "保存图片",
+    reminderViewAction: "查看图片",
+    reminderDismiss: "关闭提醒",
+    amountError: "金额错误",
+    typing: "输入中",
+    valid: "有效",
+    waitInput: "待输入",
+    amountInput: "金额输入框",
+    clearAmount: "清空金额",
+    incomeAmountDetail: "收入金额详情",
+    expenseAmountDetail: "支出金额详情",
+    rowDeleted: "行已删除",
+    resetPlaceholder: "Reset local data is a placeholder",
+    versionCurrent: "Version is up to date",
+    importSuccess: "导入成功。",
+    importFailed: "导入失败。",
+    transferCopied: "迁移码已复制。",
+    transferCopyFailed: "复制失败，请手动选择并复制迁移码。",
+    transferImportSuccess: "导入成功。当前设备已更新为迁移码中的数据。",
+    transferImportFailed: "迁移码无效，无法导入。",
+    emptyPayload: "没有可发送内容。",
+    missingTokenCopied: "未填写 Bot Token，内容已复制。",
+    sending: "发送中…",
+    sendingButton: "发送中...",
+    sentCount: "{sent} / {total} 已发送",
+    sendSuccess: "发送成功",
+    sendFailed: "发送失败",
+    failedCount: "{failed} / {total} 发送失败 · 点击重试",
+    sendComplete: "发送完成：成功 {ok}，失败 {failed}",
+    copied: "内容已复制。",
+    payloadIncome: "收入",
+    payloadExpense: "支出",
+    empty: "空",
+    imageDate: "日期：{date}",
+    imageOk: "成功",
+    imageFailed: "失败",
+    imageName: "姓名",
+    imageAmount: "金额",
+    imageTotal: "合计",
+    imageIncome: "收入：{value}",
+    imageExpense: "支出：{value}",
+    imageDiff: "差额：{value}",
+    saveImageFailed: "保存图片失败。"
+  },
+  English: {
+    documentTitle: "Reconcile",
+    live: "Live",
+    subtitle: "Side-by-side income and expense tracking",
+    saveReport: "Save Image",
+    settings: "Settings",
+    sendTelegram: "Send Telegram",
+    autoSaveLabel: "Auto-save",
+    saved: "Saved",
+    saving: "Saving…",
+    saveFailed: "Save failed",
+    summaryIncome: "Income",
+    summaryExpense: "Expense",
+    summaryDiff: "Difference",
+    incomeTable: "Income",
+    expenseTable: "Expense",
+    addIncome: "Add income",
+    addExpense: "Add expense",
+    incomeTotal: "Income total",
+    expenseTotal: "Expense total",
+    telegramTitle: "Send to Telegram",
+    telegramHint: "Choose a recipient or send to all",
+    telegramUser: "Recipient",
+    tokenPlaceholder: "Enter Bot Token. Do not hardcode it.",
+    sendSelected: "Send to selected",
+    sendSelectedSub: "Only this recipient",
+    sendAll: "Send to all",
+    sendAllCount: "Send to all ({count})",
+    sendAllSub: "{count} recipients",
+    copyContent: "Copy content",
+    copyContentSub: "Copy message to clipboard",
+    telegramNote: "Tip: Telegram users must start your Bot first, otherwise the Bot API cannot message them directly.",
+    appNote: "Income and expense are separate tables, so row counts can differ. Amount fields keep the original expression and recalculate live every 2 seconds. Totals show calculated results only. Supported: 100+20, 500-75, 12*3, 1000/4, 100×3, 1000÷4. Trailing equals signs, spaces, and multi-line input are safe.",
+    designTitle: "Design Notes",
+    design1Title: "Separate tables",
+    design1Text: "Income and expense stay independent",
+    design2Title: "Wide amount field",
+    design2Text: "Supports multi-line formulas",
+    design3Title: "Live status",
+    design3Text: "Valid / typing / error feedback",
+    design4Title: "Compact layout",
+    design4Text: "Tuned for iPhone PWA use",
+    exprTitle: "Amount details",
+    save: "Save",
+    settingsSubtitle: "Preferences, data, and device transfer",
+    appearance: "Appearance",
+    themeMode: "Theme",
+    themeModeSub: "Switch between light and dark",
+    light: "Light",
+    dark: "Dark",
+    compactMode: "Compact mode",
+    compactModeSub: "Show more on small screens",
+    localization: "Localization",
+    language: "Language",
+    languageSub: "Tap the top button to switch",
+    totalCurrency: "Total currency",
+    totalCurrencySub: "Used only for table totals",
+    data: "Data",
+    importData: "Import data",
+    importDataSub: "Import from a JSON backup",
+    exportData: "Export data",
+    exportDataSub: "Download a JSON backup",
+    transferDevice: "Transfer to new device",
+    transferDeviceSub: "Copy or import a migration code",
+    autoSaveSub: "Save local changes automatically",
+    about: "About",
+    version: "Version",
+    versionSub: "Local PWA app",
+    checkUpdate: "Check for update",
+    checkUpdateSub: "Confirm this app is current",
+    advanced: "Advanced",
+    resetData: "Reset local data",
+    resetDataSub: "Clear local data on this device",
+    transferTitle: "Transfer to new device",
+    transferSubtitle: "Move this device data with a migration code",
+    oldDevice: "Old device: create code",
+    oldDeviceSub: "Copy this code and paste it on the new device.",
+    copyTransfer: "Copy code",
+    newDevice: "New device: import code",
+    newDeviceSub: "Paste the code from the old device, then import.",
+    transferPlaceholder: "Paste migration code",
+    importTransfer: "Import to this device",
+    transferStatusDefault: "The migration code includes bills and preferences. Share it only with devices you trust.",
+    broadcastTitle: "Send to all recipients",
+    broadcastText: "This will send the message to {count} Telegram recipients. This action cannot be undone.",
+    cancel: "Cancel",
+    confirmSend: "Send now",
+    deleteRow: "Delete row",
+    undo: "Undo",
+    reminderUnsavedTitle: "Not saved yet",
+    reminderUnsavedSub: "Save as image to avoid losing your data.",
+    reminderSavedTitle: "Saved",
+    reminderSavedSub: "Last saved at {time}",
+    reminderModifiedTitle: "Changes detected",
+    reminderModifiedSub: "Save again to keep your data safe.",
+    reminderSaveAction: "Save Image",
+    reminderViewAction: "View Image",
+    reminderDismiss: "Dismiss reminder",
+    amountError: "Amount error",
+    typing: "Typing",
+    valid: "Valid",
+    waitInput: "Waiting",
+    amountInput: "amount field",
+    clearAmount: "Clear amount",
+    incomeAmountDetail: "Income amount details",
+    expenseAmountDetail: "Expense amount details",
+    rowDeleted: "Row deleted",
+    resetPlaceholder: "Reset local data is a placeholder",
+    versionCurrent: "You are up to date",
+    importSuccess: "Import complete.",
+    importFailed: "Import failed.",
+    transferCopied: "Migration code copied.",
+    transferCopyFailed: "Copy failed. Select and copy the code manually.",
+    transferImportSuccess: "Import complete. This device now uses the migrated data.",
+    transferImportFailed: "Invalid migration code.",
+    emptyPayload: "There is nothing to send.",
+    missingTokenCopied: "Bot Token is empty. Message copied instead.",
+    sending: "Sending…",
+    sendingButton: "Sending...",
+    sentCount: "{sent} / {total} sent",
+    sendSuccess: "Sent",
+    sendFailed: "Failed",
+    failedCount: "{failed} / {total} failed · tap to retry",
+    sendComplete: "Done: {ok} sent, {failed} failed",
+    copied: "Content copied.",
+    payloadIncome: "Income",
+    payloadExpense: "Expense",
+    empty: "Empty",
+    imageDate: "Date: {date}",
+    imageOk: "Done",
+    imageFailed: "Review",
+    imageName: "Name",
+    imageAmount: "Amount",
+    imageTotal: "Total",
+    imageIncome: "Income: {value}",
+    imageExpense: "Expense: {value}",
+    imageDiff: "Diff: {value}",
+    saveImageFailed: "Could not save image."
+  }
 };
 
 function newId() {
@@ -237,7 +560,7 @@ async function loadState() {
 }
 
 function persistSoon() {
-  el.saveState.textContent = "保存中…";
+  el.saveState.textContent = text("saving");
   el.saveState.style.color = "#ca8a04";
 
   clearTimeout(saveTimer);
@@ -245,11 +568,11 @@ function persistSoon() {
     try {
       localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
       await dbSet(STATE_STORE, STATE_KEY, state);
-      el.saveState.textContent = "已保存";
+      el.saveState.textContent = text("saved");
       el.saveState.style.color = "#16a34a";
       updateTelegramPreview();
     } catch (error) {
-      el.saveState.textContent = "保存失败";
+      el.saveState.textContent = text("saveFailed");
       el.saveState.style.color = "#dc2626";
     }
   }, 120);
@@ -261,19 +584,154 @@ function loadUiPrefs() {
       language: "中文",
       theme: "light",
       currency: "Rp",
-      numberFormat: "1.000.000",
       autoSave: true,
       ...(JSON.parse(localStorage.getItem(UI_PREFS_KEY) || "{}"))
     };
   } catch (error) {
-    return { language: "中文", theme: "light", currency: "Rp", numberFormat: "1.000.000", autoSave: true };
+    return { language: "中文", theme: "light", currency: "Rp", autoSave: true };
   }
+}
+
+function currentLanguage() {
+  return loadUiPrefs().language === "English" ? "English" : "中文";
+}
+
+function text(key, params = {}, language = currentLanguage()) {
+  const template = UI_TEXT[language]?.[key] ?? UI_TEXT["中文"][key] ?? key;
+  return Object.entries(params).reduce(
+    (result, [name, value]) => result.replaceAll(`{${name}}`, String(value)),
+    template
+  );
+}
+
+function setText(selector, key, params = {}) {
+  const node = typeof selector === "string" ? qs(selector) : selector;
+  if (node) node.textContent = text(key, params);
+}
+
+function labelFor(key, value) {
+  const language = currentLanguage();
+  const zh = DEFAULT_LABELS["中文"][key];
+  const en = DEFAULT_LABELS.English[key];
+  const aliases = DEFAULT_LABEL_ALIASES[key] || [];
+  return value === zh || value === en || aliases.includes(value) ? DEFAULT_LABELS[language][key] : value;
+}
+
+function defaultLabel(key) {
+  return DEFAULT_LABELS[currentLanguage()][key] || DEFAULT_LABELS["中文"][key];
 }
 
 function saveUiPrefs(next) {
   const prefs = { ...loadUiPrefs(), ...next };
   localStorage.setItem(UI_PREFS_KEY, JSON.stringify(prefs));
   applyUiPrefs(prefs);
+}
+
+function updateStaticCopy() {
+  const language = currentLanguage();
+  document.documentElement.lang = language === "English" ? "en" : "zh-CN";
+  document.title = text("documentTitle");
+
+  setText(".live-badge", "live");
+  const liveDot = document.createElement("span");
+  qs(".live-badge")?.prepend(liveDot);
+  setText(".topbar-copy > p", "subtitle");
+  setText("#saveImageBtn span", "saveReport");
+  setText("#settingsBtn span", "settings");
+  setText("#dailyTelegramCta", "sendTelegram");
+  setText(".save-state span", "autoSaveLabel");
+  setText(".balance-card div:nth-child(1) span", "summaryIncome");
+  setText(".balance-card div:nth-child(2) span", "summaryExpense");
+  setText("#diffBox span", "summaryDiff");
+  setText(".income-card .ledger-title strong", "incomeTable");
+  setText(".expense-card .ledger-title strong", "expenseTable");
+  qs(".income-card .ledger-title strong")?.prepend(Object.assign(document.createElement("img"), { src: "assets/icons/fire.svg", alt: "" }));
+  qs(".expense-card .ledger-title strong")?.prepend(Object.assign(document.createElement("img"), { src: "assets/icons/snowflake.svg", alt: "" }));
+  setText("#addIncomeBtn", "addIncome");
+  setText("#addExpenseBtn", "addExpense");
+  qs("#addIncomeBtn")?.prepend(Object.assign(document.createElement("img"), { src: "assets/icons/plus.svg", alt: "" }));
+  qs("#addExpenseBtn")?.prepend(Object.assign(document.createElement("img"), { src: "assets/icons/plus.svg", alt: "" }));
+  setText(".income-card .ledger-total span", "incomeTotal");
+  setText(".expense-card .ledger-total span", "expenseTotal");
+  setText(".telegram-card .section-title strong", "telegramTitle");
+  qs(".telegram-card .section-title strong")?.prepend(Object.assign(document.createElement("img"), { src: "assets/icons/telegram.svg", alt: "" }));
+  setText(".telegram-card .section-title span", "telegramHint");
+  setText(".telegram-grid label:nth-child(1) span", "telegramUser");
+  if (el.telegramToken) el.telegramToken.placeholder = text("tokenPlaceholder");
+  setText("#sendSelectedBtn .btn-copy strong", "sendSelected");
+  setText("#sendSelectedBtn .btn-copy small", "sendSelectedSub");
+  setText("#copyPayloadBtn .btn-copy strong", "copyContent");
+  setText("#copyPayloadBtn .btn-copy small", "copyContentSub");
+  setText("#telegramStatus", "telegramNote");
+  setText(".note", "appNote");
+  setText(".design-panel h2", "designTitle");
+  setText(".design-panel li:nth-child(1) strong", "design1Title");
+  setText(".design-panel li:nth-child(1) span", "design1Text");
+  setText(".design-panel li:nth-child(2) strong", "design2Title");
+  setText(".design-panel li:nth-child(2) span", "design2Text");
+  setText(".design-panel li:nth-child(3) strong", "design3Title");
+  setText(".design-panel li:nth-child(3) span", "design3Text");
+  setText(".design-panel li:nth-child(4) strong", "design4Title");
+  setText(".design-panel li:nth-child(4) span", "design4Text");
+  setText("#saveExprDialog", "save");
+
+  setText(".settings-header-v2 h3", "settings");
+  setText(".settings-header-v2 p", "settingsSubtitle");
+  setText(".settings-section:nth-of-type(1) h4", "appearance");
+  setText(".settings-section:nth-of-type(1) .settings-item:nth-child(1) strong", "themeMode");
+  setText(".settings-section:nth-of-type(1) .settings-item:nth-child(1) small", "themeModeSub");
+  setText('[data-setting="theme"][data-value="light"]', "light");
+  setText('[data-setting="theme"][data-value="dark"]', "dark");
+  setText(".settings-section:nth-of-type(1) .settings-item:nth-child(2) strong", "compactMode");
+  setText(".settings-section:nth-of-type(1) .settings-item:nth-child(2) small", "compactModeSub");
+  setText(".settings-section:nth-of-type(2) h4", "localization");
+  setText(".settings-section:nth-of-type(2) .settings-item:nth-child(1) strong", "language");
+  setText(".settings-section:nth-of-type(2) .settings-item:nth-child(1) small", "languageSub");
+  setText(".settings-section:nth-of-type(2) .settings-item:nth-child(2) strong", "totalCurrency");
+  setText(".settings-section:nth-of-type(2) .settings-item:nth-child(2) small", "totalCurrencySub");
+  setText(".settings-section:nth-of-type(3) h4", "data");
+  setText(".settings-section:nth-of-type(3) .settings-action:nth-child(1) strong", "importData");
+  setText(".settings-section:nth-of-type(3) .settings-action:nth-child(1) small", "importDataSub");
+  setText(".settings-section:nth-of-type(3) .settings-action:nth-child(2) strong", "exportData");
+  setText(".settings-section:nth-of-type(3) .settings-action:nth-child(2) small", "exportDataSub");
+  setText(".settings-section:nth-of-type(3) .settings-action:nth-child(3) strong", "transferDevice");
+  setText(".settings-section:nth-of-type(3) .settings-action:nth-child(3) small", "transferDeviceSub");
+  setText(".settings-section:nth-of-type(3) .settings-action:nth-child(4) strong", "autoSaveLabel");
+  setText(".settings-section:nth-of-type(3) .settings-action:nth-child(4) small", "autoSaveSub");
+  setText(".settings-section:nth-of-type(4) h4", "about");
+  setText(".settings-section:nth-of-type(4) .settings-action:nth-child(1) strong", "version");
+  setText(".settings-section:nth-of-type(4) .settings-action:nth-child(1) small", "versionSub");
+  setText(".settings-section:nth-of-type(4) .settings-action:nth-child(2) strong", "checkUpdate");
+  setText(".settings-section:nth-of-type(4) .settings-action:nth-child(2) small", "checkUpdateSub");
+  setText(".settings-section:nth-of-type(5) h4", "advanced");
+  setText(".settings-section:nth-of-type(5) .settings-action strong", "resetData");
+  setText(".settings-section:nth-of-type(5) .settings-action small", "resetDataSub");
+
+  setText(".transfer-panel h3", "transferTitle");
+  setText(".transfer-panel header p", "transferSubtitle");
+  setText(".transfer-box:nth-child(1) strong", "oldDevice");
+  setText(".transfer-box:nth-child(1) p", "oldDeviceSub");
+  setText("#copyTransferCodeBtn", "copyTransfer");
+  qs("#copyTransferCodeBtn")?.prepend(Object.assign(document.createElement("img"), { src: "assets/icons/copy.svg", alt: "" }));
+  setText(".transfer-box:nth-child(2) strong", "newDevice");
+  setText(".transfer-box:nth-child(2) p", "newDeviceSub");
+  if (el.transferCodeInput) el.transferCodeInput.placeholder = text("transferPlaceholder");
+  setText("#importTransferCodeBtn", "importTransfer");
+  qs("#importTransferCodeBtn")?.prepend(Object.assign(document.createElement("img"), { src: "assets/icons/upload.svg", alt: "" }));
+  if (el.transferStatus && !el.transferStatus.classList.contains("success") && !el.transferStatus.classList.contains("error")) {
+    el.transferStatus.textContent = text("transferStatusDefault");
+  }
+
+  setText(".confirm-card header strong", "broadcastTitle");
+  setText("#cancelBroadcastBtn", "cancel");
+  setText("#confirmBroadcastBtn", "confirmSend");
+  qs("#confirmBroadcastBtn")?.prepend(Object.assign(document.createElement("img"), { src: "assets/icons/send.svg", alt: "" }));
+  setText("#deleteRowFromPopover", "deleteRow");
+  qs("#deleteRowFromPopover")?.prepend(Object.assign(document.createElement("img"), { src: "assets/icons/trash.svg", alt: "" }));
+  setText("#undoSnackbarBtn", "undo");
+
+  updateBroadcastButtonLabel();
+  updateDailyStatus();
 }
 
 function reportStatusDate() {
@@ -306,10 +764,11 @@ function loadReportStatus() {
       date: reportStatusDate(),
       savedSignature: "",
       telegramSignature: "",
+      savedAt: "",
       ...(JSON.parse(localStorage.getItem(REPORT_STATUS_KEY) || "{}"))
     };
   } catch (error) {
-    return { date: reportStatusDate(), savedSignature: "", telegramSignature: "" };
+    return { date: reportStatusDate(), savedSignature: "", telegramSignature: "", savedAt: "" };
   }
 }
 
@@ -319,6 +778,14 @@ function saveReportStatus(next) {
   updateDailyStatus();
 }
 
+function formatReminderTime(value) {
+  const date = value ? new Date(value) : new Date();
+  return date.toLocaleTimeString(currentLanguage() === "English" ? "en-US" : "zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
 function updateDailyStatus() {
   if (!el.dailyStatus) return;
 
@@ -326,39 +793,57 @@ function updateDailyStatus() {
   const status = loadReportStatus();
   const isToday = status.date === reportStatusDate();
   const imageSaved = isToday && status.savedSignature === currentSignature;
-  const telegramSent = imageSaved && status.telegramSignature === currentSignature;
+  const hasSavedToday = isToday && Boolean(status.savedSignature);
+  let stateName = "unsaved";
 
-  if (!imageSaved) {
-    el.dailyStatus.className = "daily-status draft";
-    el.dailyStatusText.textContent = "未保存变更";
-    el.dailyStatusSub.textContent = "修改尚未保存到图片";
-    el.dailyTelegramCta.hidden = true;
+  if (imageSaved) {
+    stateName = "saved";
+  } else if (hasSavedToday) {
+    stateName = "modified";
+  }
+
+  const reminderKey = `${stateName}:${currentSignature}`;
+  if (dismissedReminderKey === reminderKey) {
+    el.dailyStatus.hidden = true;
     return;
   }
 
-  if (!telegramSent) {
-    el.dailyStatus.className = "daily-status pending";
-    el.dailyStatusText.textContent = "图片已保存，未发送 Telegram";
-    el.dailyStatusSub.textContent = "尚未发送至 Telegram";
-    el.dailyTelegramCta.hidden = false;
-    return;
+  el.dailyStatus.hidden = false;
+  el.dailyStatus.className = `daily-status ${stateName}`;
+  el.dailyStatus.dataset.state = stateName;
+
+  if (stateName === "saved") {
+    el.dailyStatusIcon.textContent = "✓";
+    el.dailyStatusText.textContent = text("reminderSavedTitle");
+    el.dailyStatusSub.textContent = text("reminderSavedSub", { time: formatReminderTime(status.savedAt) });
+    el.dailyTelegramCta.textContent = text("reminderViewAction");
+  } else if (stateName === "modified") {
+    el.dailyStatusIcon.textContent = "✎";
+    el.dailyStatusText.textContent = text("reminderModifiedTitle");
+    el.dailyStatusSub.textContent = text("reminderModifiedSub");
+    el.dailyTelegramCta.textContent = text("reminderSaveAction");
+  } else {
+    el.dailyStatusIcon.textContent = "↥";
+    el.dailyStatusText.textContent = text("reminderUnsavedTitle");
+    el.dailyStatusSub.textContent = text("reminderUnsavedSub");
+    el.dailyTelegramCta.textContent = text("reminderSaveAction");
   }
 
-  el.dailyStatus.className = "daily-status sent";
-  el.dailyStatusText.textContent = "已发送 Telegram";
-  el.dailyStatusSub.textContent = "图片已保存并已发送";
-  el.dailyTelegramCta.hidden = true;
+  if (el.dailyStatusDismiss) el.dailyStatusDismiss.setAttribute("aria-label", text("reminderDismiss"));
 }
 
 function applyUiPrefs(prefs = loadUiPrefs()) {
   const language = prefs.language === "English" ? "English" : "中文";
   if (el.languageButtonLabel) el.languageButtonLabel.textContent = language;
+  if (el.settingsLanguageValue) el.settingsLanguageValue.textContent = language;
   if (el.settingsAutoSave) el.settingsAutoSave.checked = prefs.autoSave !== false;
   document.body.classList.toggle("theme-dark", prefs.theme === "dark");
 
   document.querySelectorAll("[data-setting]").forEach((button) => {
     button.classList.toggle("active", prefs[button.dataset.setting] === button.dataset.value);
   });
+
+  updateStaticCopy();
 }
 
 function normalizeFullWidth(value) {
@@ -598,7 +1083,14 @@ function hasValue(value) {
 }
 
 function formatMoney(value) {
-  return Number(value || 0).toLocaleString("zh-CN", { maximumFractionDigits: 2 });
+  const number = Number(value || 0);
+  const sign = number < 0 ? "-" : "";
+  const absolute = Math.abs(number);
+  const fixed = Number.isInteger(absolute) ? String(absolute) : absolute.toFixed(2);
+  const [integer, decimal] = fixed.split(".");
+  const grouped = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+  return `${sign}${grouped}${decimal ? `.${decimal}` : ""}`;
 }
 
 function currencyPrefix() {
@@ -613,17 +1105,17 @@ function formatMoneyWithCurrency(value, { signed = false } = {}) {
 }
 
 function entryStatus(entryData) {
-  if (entryData.state === "error") return { type: "bad", text: "金额错误" };
-  if (entryData.state === "typing") return { type: "typing", text: "输入中..." };
-  if (!hasValue(entryData.name) && !hasValue(entryData.expr)) return { type: "wait", text: "待输入" };
-  return { type: "ok", text: "已计算" };
+  if (entryData.state === "error") return { type: "bad", text: text("amountError") };
+  if (entryData.state === "typing") return { type: "typing", text: text("typing") };
+  if (!hasValue(entryData.name) && !hasValue(entryData.expr)) return { type: "wait", text: text("waitInput") };
+  return { type: "ok", text: text("valid") };
 }
 
 function inlineStatus(entryData) {
-  if (entryData.state === "error") return "错误";
-  if (entryData.state === "typing") return "输入中";
-  if (!hasValue(entryData.expr)) return "输入中";
-  return "有效";
+  if (entryData.state === "error") return text("amountError");
+  if (entryData.state === "typing") return text("typing");
+  if (!hasValue(entryData.expr)) return text("typing");
+  return text("valid");
 }
 
 function totals() {
@@ -661,7 +1153,7 @@ function moneyEditor(side, index, value) {
         onpaste="setTimeout(() => { adjustTextareaHeight(this); updateEntry('${side}', ${index}, 'expr', this.value); }, 0)"
         onblur="updateEntry('${side}', ${index}, 'expr', this.value)">${escapeHtml(value)}</textarea>
       <span class="inline-status" data-inline-status="${side}-${index}">${inlineStatus(entryData)}</span>
-      <button class="amount-action-btn" type="button" data-side="${side}" data-index="${index}" onclick="clearAmountCell('${side}', ${index})" title="清空金额" aria-label="清空金额">
+      <button class="amount-action-btn" type="button" data-side="${side}" data-index="${index}" onclick="clearAmountCell('${side}', ${index})" title="${text("clearAmount")}" aria-label="${text("clearAmount")}">
         <img src="assets/icons/broom.svg" alt="" />
       </button>
     </div>
@@ -671,13 +1163,13 @@ function moneyEditor(side, index, value) {
 function amountBox(side, index) {
   const entryData = state[`${side}Rows`][index];
   const stateValue = entryData.state || "ok";
-  const text = stateValue === "typing" ? "输入中" : formatMoney(entryData.amount);
+  const amountText = stateValue === "typing" ? text("typing") : formatMoney(entryData.amount);
 
   return `
     <div class="amount-box ${stateValue === "error" ? "error" : stateValue === "typing" ? "typing" : ""}"
       data-amount="${side}-${index}"
       title="${escapeHtml(entryData.error || "")}">
-      ${text}
+      ${amountText}
     </div>
   `;
 }
@@ -694,7 +1186,7 @@ function renderLedger(side) {
         <div class="ledger-row">
           <div class="cell index-cell"><span class="row-index">${index + 1}</span></div>
           <div class="cell">
-            <input value="${escapeHtml(item.name)}" placeholder="名" lang="zh-CN" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next"
+            <input value="${escapeHtml(item.name)}" placeholder="${escapeHtml(defaultLabel(`${side}Name`))}" lang="${currentLanguage() === "English" ? "en" : "zh-CN"}" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next"
               oninput="updateEntry('${side}', ${index}, 'name', this.value)" />
           </div>
           <div class="cell">${moneyEditor(side, index, item.expr)}</div>
@@ -725,7 +1217,7 @@ function refreshEntryVisual(side, index) {
 
   document.querySelectorAll(`[data-amount="${side}-${index}"]`).forEach((node) => {
     node.className = `amount-box ${item.state === "error" ? "error" : item.state === "typing" ? "typing" : ""}`;
-    node.textContent = item.state === "typing" ? "输入中" : formatMoney(item.amount);
+    node.textContent = item.state === "typing" ? text("typing") : formatMoney(item.amount);
     node.title = item.error || "";
   });
 
@@ -748,9 +1240,9 @@ function renderTotals() {
 
   el.incomeSectionTotal.textContent = formatMoneyWithCurrency(total.income);
   el.expenseSectionTotal.textContent = formatMoneyWithCurrency(total.expense);
-  el.totalIncome.textContent = formatMoneyWithCurrency(total.income);
-  el.totalExpense.textContent = formatMoneyWithCurrency(total.expense);
-  el.difference.textContent = formatMoneyWithCurrency(total.diff, { signed: true });
+  el.totalIncome.textContent = formatMoney(total.income);
+  el.totalExpense.textContent = formatMoney(total.expense);
+  el.difference.textContent = formatMoney(total.diff);
 
   let cls = "ok";
 
@@ -772,13 +1264,13 @@ function render() {
   document.documentElement.style.setProperty("--scale", state.fontScale / 100);
   document.body.classList.toggle("compact", state.compact);
 
-  el.appTitle.textContent = state.title;
-  el.incomeNameLabel.textContent = state.labels.incomeName;
-  el.incomeMoneyLabel.textContent = state.labels.incomeMoney;
-  el.incomeTotalLabel.textContent = state.labels.incomeTotal;
-  el.expenseNameLabel.textContent = state.labels.expenseName;
-  el.expenseMoneyLabel.textContent = state.labels.expenseMoney;
-  el.expenseTotalLabel.textContent = state.labels.expenseTotal;
+  el.appTitle.textContent = labelFor("appTitle", state.title);
+  el.incomeNameLabel.textContent = labelFor("incomeName", state.labels.incomeName);
+  el.incomeMoneyLabel.textContent = labelFor("incomeMoney", state.labels.incomeMoney);
+  el.incomeTotalLabel.textContent = labelFor("incomeTotal", state.labels.incomeTotal);
+  el.expenseNameLabel.textContent = labelFor("expenseName", state.labels.expenseName);
+  el.expenseMoneyLabel.textContent = labelFor("expenseMoney", state.labels.expenseMoney);
+  el.expenseTotalLabel.textContent = labelFor("expenseTotal", state.labels.expenseTotal);
   if (el.fontScale) el.fontScale.value = state.fontScale;
   if (el.settingsCompact) el.settingsCompact.checked = state.compact;
 
@@ -869,7 +1361,7 @@ function adjustAllTextareas() {
 
 function insertToActiveMoneyInput(text) {
   if (!activeMoneyInput) {
-    alert("请先点击金额输入框。");
+    alert(currentLanguage() === "English" ? `Tap an ${text("amountInput")} first.` : "请先点击金额输入框。");
     return;
   }
 
@@ -890,7 +1382,7 @@ function insertToActiveMoneyInput(text) {
 
 function backspaceActiveMoneyInput() {
   if (!activeMoneyInput) {
-    alert("请先点击金额输入框。");
+    alert(currentLanguage() === "English" ? `Tap an ${text("amountInput")} first.` : "请先点击金额输入框。");
     return;
   }
 
@@ -975,7 +1467,7 @@ window.openExprDialog = function(side, index) {
   const item = state[`${side}Rows`][index];
   if (!item) return;
 
-  el.exprDialogTitle.textContent = side === "income" ? "收入金额详情" : "支出金额详情";
+  el.exprDialogTitle.textContent = side === "income" ? text("incomeAmountDetail") : text("expenseAmountDetail");
   el.exprDialogText.value = item.expr || "";
   el.exprDialog.showModal();
 
@@ -1057,7 +1549,7 @@ function deleteEntryWithUndo(side, index) {
 
   persistSoon();
   render();
-  showUndoSnackbar("行已删除", () => {
+  showUndoSnackbar(text("rowDeleted"), () => {
     const currentRows = state[`${side}Rows`];
     if (insertedPlaceholder && currentRows.length === 1 && !hasValue(currentRows[0].name) && !hasValue(currentRows[0].expr)) {
       currentRows.splice(0, 1);
@@ -1099,7 +1591,10 @@ el.closeSettingsBtn.addEventListener("click", () => {
 document.querySelectorAll("[data-setting]").forEach((button) => {
   button.addEventListener("click", () => {
     saveUiPrefs({ [button.dataset.setting]: button.dataset.value });
-    if (button.dataset.setting === "currency") renderTotals();
+    if (button.dataset.setting === "currency") {
+      renderTotals();
+      updateTelegramPreview();
+    }
   });
 });
 
@@ -1114,7 +1609,7 @@ el.settingsAutoSave.addEventListener("change", () => {
 });
 
 el.resetLocalDataBtn.addEventListener("click", () => {
-  el.undoSnackbarText.textContent = "Reset local data is a placeholder";
+  el.undoSnackbarText.textContent = text("resetPlaceholder");
   el.undoSnackbar.hidden = false;
   clearTimeout(undoSnackbarTimer);
   undoSnackbarTimer = setTimeout(() => {
@@ -1123,7 +1618,7 @@ el.resetLocalDataBtn.addEventListener("click", () => {
 });
 
 el.updateVersionBtn.addEventListener("click", () => {
-  el.undoSnackbarText.textContent = "Version is up to date";
+  el.undoSnackbarText.textContent = text("versionCurrent");
   el.undoSnackbar.hidden = false;
   clearTimeout(undoSnackbarTimer);
   undoSnackbarTimer = setTimeout(() => {
@@ -1154,13 +1649,13 @@ function bindEditable(element, callback) {
   });
 }
 
-bindEditable(el.appTitle, (value) => state.title = value || "收支核对");
-bindEditable(el.incomeNameLabel, (value) => state.labels.incomeName = value || "名");
-bindEditable(el.incomeMoneyLabel, (value) => state.labels.incomeMoney = value || "金额");
-bindEditable(el.incomeTotalLabel, (value) => state.labels.incomeTotal = value || "合计");
-bindEditable(el.expenseNameLabel, (value) => state.labels.expenseName = value || "名");
-bindEditable(el.expenseMoneyLabel, (value) => state.labels.expenseMoney = value || "金额");
-bindEditable(el.expenseTotalLabel, (value) => state.labels.expenseTotal = value || "合计");
+bindEditable(el.appTitle, (value) => state.title = value || defaultLabel("appTitle"));
+bindEditable(el.incomeNameLabel, (value) => state.labels.incomeName = value || defaultLabel("incomeName"));
+bindEditable(el.incomeMoneyLabel, (value) => state.labels.incomeMoney = value || defaultLabel("incomeMoney"));
+bindEditable(el.incomeTotalLabel, (value) => state.labels.incomeTotal = value || defaultLabel("incomeTotal"));
+bindEditable(el.expenseNameLabel, (value) => state.labels.expenseName = value || defaultLabel("expenseName"));
+bindEditable(el.expenseMoneyLabel, (value) => state.labels.expenseMoney = value || defaultLabel("expenseMoney"));
+bindEditable(el.expenseTotalLabel, (value) => state.labels.expenseTotal = value || defaultLabel("expenseTotal"));
 
 $("backupBtn").addEventListener("click", () => {
   const payload = { exportedAt: new Date().toISOString(), state };
@@ -1177,11 +1672,108 @@ $("importBackupInput").addEventListener("change", async (event) => {
     state = normalizeState(payload.state || payload);
     persistSoon();
     render();
-    alert("导入成功。");
+    alert(text("importSuccess"));
   } catch (error) {
-    alert("导入失败。");
+    alert(text("importFailed"));
   } finally {
     event.target.value = "";
+  }
+});
+
+function bytesToBase64(bytes) {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+function base64ToBytes(value) {
+  const binary = atob(String(value || "").trim());
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+function encodeTransferPayload() {
+  const payload = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    state,
+    uiPrefs: loadUiPrefs()
+  };
+  return bytesToBase64(new TextEncoder().encode(JSON.stringify(payload)));
+}
+
+function decodeTransferPayload(code) {
+  const payload = JSON.parse(new TextDecoder().decode(base64ToBytes(code)));
+  const rawState = payload.state || payload;
+  if (!Array.isArray(rawState?.incomeRows) && !Array.isArray(rawState?.rows)) {
+    throw new Error("Invalid transfer payload");
+  }
+  return { rawState, uiPrefs: payload.uiPrefs || null };
+}
+
+function refreshTransferCode() {
+  if (!el.transferCodeOutput) return;
+  el.transferCodeOutput.value = encodeTransferPayload();
+}
+
+async function copyTextToClipboard(text, fallbackElement = null) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  if (!fallbackElement) throw new Error("Clipboard unavailable");
+  fallbackElement.focus();
+  fallbackElement.select();
+  document.execCommand("copy");
+}
+
+el.transferDeviceBtn?.addEventListener("click", () => {
+  refreshTransferCode();
+  if (el.transferCodeInput) el.transferCodeInput.value = "";
+  if (el.transferStatus) {
+    el.transferStatus.textContent = text("transferStatusDefault");
+    el.transferStatus.className = "transfer-status";
+  }
+  el.transferDialog?.showModal();
+});
+
+el.closeTransferDialog?.addEventListener("click", () => {
+  el.transferDialog?.close();
+});
+
+el.copyTransferCodeBtn?.addEventListener("click", async () => {
+  try {
+    refreshTransferCode();
+    await copyTextToClipboard(el.transferCodeOutput.value, el.transferCodeOutput);
+    el.transferStatus.textContent = text("transferCopied");
+    el.transferStatus.className = "transfer-status success";
+  } catch (error) {
+    el.transferStatus.textContent = text("transferCopyFailed");
+    el.transferStatus.className = "transfer-status error";
+  }
+});
+
+el.importTransferCodeBtn?.addEventListener("click", () => {
+  try {
+    const { rawState, uiPrefs } = decodeTransferPayload(el.transferCodeInput.value);
+    state = normalizeState(rawState);
+    if (uiPrefs && typeof uiPrefs === "object") {
+      localStorage.setItem(UI_PREFS_KEY, JSON.stringify({ ...loadUiPrefs(), ...uiPrefs }));
+    }
+    persistSoon();
+    applyUiPrefs();
+    render();
+    updateTelegramPreview();
+    el.transferStatus.textContent = text("transferImportSuccess");
+    el.transferStatus.className = "transfer-status success";
+  } catch (error) {
+    el.transferStatus.textContent = text("transferImportFailed");
+    el.transferStatus.className = "transfer-status error";
   }
 });
 
@@ -1203,9 +1795,9 @@ function linePayload(item) {
 }
 
 function buildSidePayload(side) {
-  const title = side === "income" ? "收入" : "支出";
+  const title = side === "income" ? text("payloadIncome") : text("payloadExpense");
   const entries = visibleEntries(side).map(linePayload).join("\n\n");
-  return `<b>${title}</b>\n\n${entries || "<code>空</code>"}`;
+  return `<b>${title}</b>\n\n${entries || `<code>${text("empty")}</code>`}`;
 }
 
 function buildAllPayload() {
@@ -1213,7 +1805,7 @@ function buildAllPayload() {
 }
 
 function buildEntryPayload(side, index) {
-  const title = side === "income" ? "收入" : "支出";
+  const title = side === "income" ? text("payloadIncome") : text("payloadExpense");
   const item = state[`${side}Rows`][index];
   return `<b>${title}</b>\n\n${linePayload(item)}`;
 }
@@ -1243,10 +1835,10 @@ function allTelegramUserIds() {
 
 function updateBroadcastButtonLabel() {
   const count = allTelegramUserIds().length;
-  if (el.sendAllLabel) el.sendAllLabel.textContent = `发送给全部 (${count})`;
-  if (el.sendAllSubLabel) el.sendAllSubLabel.textContent = `发送给 ${count} 位用户`;
+  if (el.sendAllLabel) el.sendAllLabel.textContent = text("sendAllCount", { count });
+  if (el.sendAllSubLabel) el.sendAllSubLabel.textContent = text("sendAllSub", { count });
   if (el.broadcastConfirmText) {
-    el.broadcastConfirmText.textContent = `你将把这条消息发送给 ${count} 位 Telegram 用户。此操作无法撤销，确定要继续吗？`;
+    el.broadcastConfirmText.textContent = text("broadcastText", { count });
   }
 }
 
@@ -1261,16 +1853,16 @@ function setTelegramButtonState(button, stateName, detail = {}) {
 
   if (stateName === "loading") {
     button.classList.add("is-loading");
-    if (strong) strong.textContent = "发送中...";
-    if (small) small.textContent = `${detail.sent || 0} / ${detail.total || 0} 已发送`;
+    if (strong) strong.textContent = text("sendingButton");
+    if (small) small.textContent = text("sentCount", { sent: detail.sent || 0, total: detail.total || 0 });
     if (img) img.src = "assets/icons/settings.svg";
     return;
   }
 
   if (stateName === "success") {
     button.classList.add("is-success");
-    if (strong) strong.textContent = "发送成功";
-    if (small) small.textContent = `${detail.sent || 0} / ${detail.total || 0} 已发送`;
+    if (strong) strong.textContent = text("sendSuccess");
+    if (small) small.textContent = text("sentCount", { sent: detail.sent || 0, total: detail.total || 0 });
     if (img) img.src = "assets/icons/check.svg";
     setTimeout(() => resetTelegramButtons(), 1800);
     return;
@@ -1278,8 +1870,8 @@ function setTelegramButtonState(button, stateName, detail = {}) {
 
   if (stateName === "failed") {
     button.classList.add("is-failed");
-    if (strong) strong.textContent = "发送失败";
-    if (small) small.textContent = `${detail.failed || 0} / ${detail.total || 0} 发送失败 · 点击重试`;
+    if (strong) strong.textContent = text("sendFailed");
+    if (small) small.textContent = text("failedCount", { failed: detail.failed || 0, total: detail.total || 0 });
     if (img) img.src = "assets/icons/x.svg";
     setTimeout(() => resetTelegramButtons(), 2600);
     return;
@@ -1296,8 +1888,8 @@ function resetTelegramButtons() {
     const strong = el.sendSelectedBtn.querySelector(".btn-copy strong");
     const small = el.sendSelectedBtn.querySelector(".btn-copy small");
     if (img) img.src = "assets/icons/send.svg";
-    if (strong) strong.textContent = "发送给选中用户";
-    if (small) small.textContent = "仅发送给所选用户";
+    if (strong) strong.textContent = text("sendSelected");
+    if (small) small.textContent = text("sendSelectedSub");
   }
 
   if (el.sendAllBtn) {
@@ -1315,17 +1907,17 @@ async function sendTelegram(chatIds, htmlPayload, uiButton = null) {
   localStorage.setItem(TOKEN_KEY, token);
 
   if (!htmlPayload.trim()) {
-    alert("没有可发送内容。");
+    alert(text("emptyPayload"));
     return;
   }
 
   if (!token) {
     await navigator.clipboard.writeText(previewTextFromHtml(htmlPayload));
-    el.telegramStatus.textContent = "未填写 Bot Token，内容已复制。";
+    el.telegramStatus.textContent = text("missingTokenCopied");
     return;
   }
 
-  el.telegramStatus.textContent = "发送中…";
+  el.telegramStatus.textContent = text("sending");
   setTelegramButtonState(uiButton, "loading", { sent: 0, total: chatIds.length });
 
   let ok = 0;
@@ -1355,7 +1947,7 @@ async function sendTelegram(chatIds, htmlPayload, uiButton = null) {
     setTelegramButtonState(uiButton, "loading", { sent: ok, total: chatIds.length });
   }
 
-  el.telegramStatus.textContent = `发送完成：成功 ${ok}，失败 ${failed}`;
+  el.telegramStatus.textContent = text("sendComplete", { ok, failed });
   setTelegramButtonState(
     uiButton,
     failed === 0 && ok > 0 ? "success" : "failed",
@@ -1396,13 +1988,23 @@ el.confirmBroadcastBtn.addEventListener("click", () => {
 });
 
 el.dailyTelegramCta.addEventListener("click", () => {
-  sendTelegram(selectedTelegramUserIds(), buildAllPayload());
+  if (el.dailyStatus?.dataset.state === "saved" && lastSavedImageUrl) {
+    window.open(lastSavedImageUrl, "_blank", "noopener");
+    return;
+  }
+
+  saveImageReport();
+});
+
+el.dailyStatusDismiss?.addEventListener("click", () => {
+  dismissedReminderKey = `${el.dailyStatus?.dataset.state || "unsaved"}:${reportSignature()}`;
+  if (el.dailyStatus) el.dailyStatus.hidden = true;
 });
 
 $("copyPayloadBtn").addEventListener("click", async () => {
   const text = previewTextFromHtml(buildAllPayload());
   await navigator.clipboard.writeText(text);
-  el.telegramStatus.textContent = "内容已复制。";
+  el.telegramStatus.textContent = UI_TEXT[currentLanguage()].copied;
 });
 
 el.telegramToken.addEventListener("input", () => {
@@ -1458,7 +2060,7 @@ function saveImageReport() {
 
   ctx.fillStyle = "#64748b";
   ctx.font = "bold 20px Microsoft YaHei, PingFang SC, Arial";
-  ctx.fillText(`日期：${imageDate}`, 70, 130);
+  ctx.fillText(text("imageDate", { date: imageDate }), 70, 130);
 
   ctx.fillStyle = ok ? "#16a34a" : "#dc2626";
   drawRoundRect(ctx, width - 200, 58, 130, 48, 24);
@@ -1466,7 +2068,7 @@ function saveImageReport() {
 
   ctx.fillStyle = "#ffffff";
   ctx.font = "bold 24px Microsoft YaHei, PingFang SC, Arial";
-  ctx.fillText(ok ? "成功" : "失败", width - 160, 90);
+  ctx.fillText(ok ? text("imageOk") : text("imageFailed"), width - 160, 90);
 
   let y = 170;
   const drawSection = (title, color, rows) => {
@@ -1485,9 +2087,9 @@ function saveImageReport() {
 
     ctx.fillStyle = "#0f172a";
     ctx.font = "bold 19px Microsoft YaHei, PingFang SC, Arial";
-    ctx.fillText("姓名", 92, y + 26);
-    ctx.fillText("金额", 230, y + 26);
-    ctx.fillText("合计", 850, y + 26);
+    ctx.fillText(text("imageName"), 92, y + 26);
+    ctx.fillText(text("imageAmount"), 230, y + 26);
+    ctx.fillText(text("imageTotal"), 850, y + 26);
     y += 48;
 
     rows.forEach((item, index) => {
@@ -1510,8 +2112,8 @@ function saveImageReport() {
     y += 12;
   };
 
-  drawSection("收入", "#f97316", incomeRows);
-  drawSection("支出", "#0284c7", expenseRows);
+  drawSection(text("payloadIncome"), "#f97316", incomeRows);
+  drawSection(text("payloadExpense"), "#0284c7", expenseRows);
 
   ctx.fillStyle = "#0f172a";
   drawRoundRect(ctx, 70, y, 940, 68, 18);
@@ -1519,27 +2121,31 @@ function saveImageReport() {
 
   ctx.fillStyle = "#ffffff";
   ctx.font = "bold 25px Microsoft YaHei, PingFang SC, Arial";
-  ctx.fillText(`收入：${formatMoney(total.income)}`, 100, y + 43);
-  ctx.fillText(`支出：${formatMoney(total.expense)}`, 390, y + 43);
+  ctx.fillText(text("imageIncome", { value: formatMoney(total.income) }), 100, y + 43);
+  ctx.fillText(text("imageExpense", { value: formatMoney(total.expense) }), 390, y + 43);
   ctx.fillStyle = ok ? "#86efac" : "#fca5a5";
-  ctx.fillText(`差额：${formatMoney(total.diff)}`, 680, y + 43);
+  ctx.fillText(text("imageDiff", { value: formatMoney(total.diff) }), 680, y + 43);
 
   canvas.toBlob(async (blob) => {
-    if (!blob) return alert("保存图片失败。");
+    if (!blob) return alert(text("saveImageFailed"));
     const filename = `收支核对-${new Date().toISOString().slice(0, 10)}.png`;
     const file = new File([blob], filename, { type: "image/png" });
     const savedSignature = reportSignature();
+    const savedAt = new Date().toISOString();
+
+    if (lastSavedImageUrl) URL.revokeObjectURL(lastSavedImageUrl);
+    lastSavedImageUrl = URL.createObjectURL(blob);
 
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
         await navigator.share({ files: [file], title: "收支核对" });
-        saveReportStatus({ savedSignature, telegramSignature: "" });
+        saveReportStatus({ savedSignature, telegramSignature: "", savedAt });
         return;
       } catch (error) {}
     }
 
     downloadBlob(blob, filename);
-    saveReportStatus({ savedSignature, telegramSignature: "" });
+    saveReportStatus({ savedSignature, telegramSignature: "", savedAt });
   }, "image/png", .96);
 }
 window.saveImageReport = saveImageReport;

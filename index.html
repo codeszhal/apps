@@ -38,15 +38,18 @@
       </section>
     </header>
 
-    <section id="dailyStatus" class="daily-status draft" aria-live="polite">
+    <section id="dailyStatus" class="daily-status unsaved" aria-live="polite">
       <div class="daily-status-main">
-        <span class="daily-status-dot"></span>
+        <span id="dailyStatusIcon" class="daily-status-icon" aria-hidden="true">↥</span>
         <div>
-          <strong id="dailyStatusText">未保存变更</strong>
-          <span id="dailyStatusSub">修改尚未保存到图片</span>
+          <strong id="dailyStatusText">Not saved yet</strong>
+          <span id="dailyStatusSub">Save as image to avoid losing your data.</span>
         </div>
       </div>
-      <button id="dailyTelegramCta" class="daily-status-cta" type="button" hidden>发送 Telegram</button>
+      <div class="daily-status-actions">
+        <button id="dailyTelegramCta" class="daily-status-cta" type="button">Save Image</button>
+        <button id="dailyStatusDismiss" class="daily-status-dismiss" type="button" aria-label="Dismiss reminder">×</button>
+      </div>
     </section>
 
     <input id="fontScale" type="hidden" value="100" />
@@ -181,67 +184,179 @@
   </dialog>
 
   <dialog id="settingsDialog" class="settings-dialog">
-    <div class="settings-panel">
-      <aside class="settings-nav" aria-hidden="true">
-        <strong><img src="assets/icons/settings.svg" alt="" />设置</strong>
-        <span class="active">通用</span>
-        <span>显示</span>
-        <span>数据管理</span>
-        <span>导入 / 导出</span>
-      </aside>
-      <section class="settings-content">
-        <header>
-          <h3>设置</h3>
+    <div class="settings-panel settings-panel-v2">
+      <section class="settings-content settings-content-v2">
+        <header class="settings-header-v2">
+          <div>
+            <h3>设置</h3>
+            <p>偏好、数据与设备迁移</p>
+          </div>
           <button id="closeSettingsBtn" class="icon-only" type="button">×</button>
         </header>
 
-        <div class="setting-row">
-          <span>主题模式</span>
-          <div class="segmented" data-setting-group="theme">
-            <button type="button" data-setting="theme" data-value="light">浅色</button>
-            <button type="button" data-setting="theme" data-value="dark">深色</button>
+        <section class="settings-section">
+          <h4>外观</h4>
+          <div class="settings-card">
+            <div class="settings-item">
+              <span class="settings-icon"><img src="assets/icons/settings.svg" alt="" /></span>
+              <div class="settings-copy">
+                <strong>主题模式</strong>
+                <small>切换浅色或深色界面</small>
+              </div>
+              <div class="segmented chip-group compact" data-setting-group="theme">
+                <button type="button" data-setting="theme" data-value="light">浅色</button>
+                <button type="button" data-setting="theme" data-value="dark">深色</button>
+              </div>
+            </div>
+
+            <label class="settings-item switch-row">
+              <span class="settings-icon"><img src="assets/icons/mobile.svg" alt="" /></span>
+              <div class="settings-copy">
+                <strong>紧凑模式</strong>
+                <small>在手机屏幕显示更多内容</small>
+              </div>
+              <input id="settingsCompact" type="checkbox" />
+            </label>
           </div>
-        </div>
+        </section>
 
-        <div class="setting-row">
-          <span>合计货币</span>
-          <div class="segmented" data-setting-group="currency">
-            <button type="button" data-setting="currency" data-value="Rp">Rp</button>
-            <button type="button" data-setting="currency" data-value="¥">¥</button>
-            <button type="button" data-setting="currency" data-value="$">$</button>
-            <button type="button" data-setting="currency" data-value="USDT">USDT</button>
+        <section class="settings-section">
+          <h4>本地化</h4>
+          <div class="settings-card">
+            <div class="settings-item">
+              <span class="settings-icon"><img src="assets/icons/globe.svg" alt="" /></span>
+              <div class="settings-copy">
+                <strong>语言 / Language</strong>
+                <small>顶部按钮可快速切换</small>
+              </div>
+              <span class="setting-value" id="settingsLanguageValue">中文</span>
+            </div>
+
+            <div class="settings-item stack">
+              <span class="settings-icon"><img src="assets/icons/cash.svg" alt="" /></span>
+              <div class="settings-copy">
+                <strong>合计货币</strong>
+                <small>用于总金额显示</small>
+              </div>
+              <div class="segmented chip-group" data-setting-group="currency">
+                <button type="button" data-setting="currency" data-value="Rp">Rp</button>
+                <button type="button" data-setting="currency" data-value="¥">¥</button>
+                <button type="button" data-setting="currency" data-value="$">$</button>
+                <button type="button" data-setting="currency" data-value="USDT">USDT</button>
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
 
-        <div class="setting-row">
-          <span>数字格式</span>
-          <div class="segmented" data-setting-group="numberFormat">
-            <button type="button" data-setting="numberFormat" data-value="1.000.000">1.000.000</button>
-            <button type="button" data-setting="numberFormat" data-value="1,000,000">1,000,000</button>
-            <button type="button" data-setting="numberFormat" data-value="1000000">1000000</button>
+        <section class="settings-section">
+          <h4>数据</h4>
+          <div class="settings-card action-card">
+            <label class="settings-action">
+              <span class="settings-icon"><img src="assets/icons/upload.svg" alt="" /></span>
+              <span class="settings-copy">
+                <strong>导入数据</strong>
+                <small>从 JSON 文件导入数据</small>
+              </span>
+              <img class="settings-trail" src="assets/icons/chevron-right.svg" alt="" />
+              <input id="importBackupInput" type="file" accept="application/json" hidden />
+            </label>
+
+            <button id="backupBtn" class="settings-action" type="button">
+              <span class="settings-icon"><img src="assets/icons/download.svg" alt="" /></span>
+              <span class="settings-copy">
+                <strong>导出数据</strong>
+                <small>导出为 JSON 文件</small>
+              </span>
+              <img class="settings-trail" src="assets/icons/chevron-right.svg" alt="" />
+            </button>
+
+            <button id="transferDeviceBtn" class="settings-action" type="button">
+              <span class="settings-icon"><img src="assets/icons/qrcode.svg" alt="" /></span>
+              <span class="settings-copy">
+                <strong>转移到新设备</strong>
+                <small>复制或导入一次性迁移码</small>
+              </span>
+              <img class="settings-trail" src="assets/icons/chevron-right.svg" alt="" />
+            </button>
+
+            <label class="settings-action switch-row">
+              <span class="settings-icon"><img src="assets/icons/check.svg" alt="" /></span>
+              <span class="settings-copy">
+                <strong>自动保存</strong>
+                <small>编辑后自动保存本地数据</small>
+              </span>
+              <input id="settingsAutoSave" type="checkbox" checked />
+            </label>
           </div>
-        </div>
+        </section>
 
-        <label class="setting-row switch-row">
-          <span>紧凑模式</span>
-          <input id="settingsCompact" type="checkbox" />
-        </label>
+        <section class="settings-section">
+          <h4>关于</h4>
+          <div class="settings-card action-card">
+            <div class="settings-action static">
+              <span class="settings-icon"><img src="assets/icons/mobile.svg" alt="" /></span>
+              <span class="settings-copy">
+                <strong>版本</strong>
+                <small>PWA 本地应用</small>
+              </span>
+              <span class="setting-value">v13</span>
+            </div>
 
-        <label class="setting-row switch-row">
-          <span>自动保存</span>
-          <input id="settingsAutoSave" type="checkbox" checked />
-        </label>
+            <button id="updateVersionBtn" class="settings-action" type="button">
+              <span class="settings-icon"><img src="assets/icons/download.svg" alt="" /></span>
+              <span class="settings-copy">
+                <strong>检查更新</strong>
+                <small>确认当前是否为最新版本</small>
+              </span>
+              <img class="settings-trail" src="assets/icons/chevron-right.svg" alt="" />
+            </button>
+          </div>
+        </section>
 
-        <div class="setting-actions">
-          <button id="backupBtn" class="btn soft" type="button">导出</button>
-          <label class="btn soft import-btn">
-            导入
-            <input id="importBackupInput" type="file" accept="application/json" hidden />
-          </label>
-          <button id="resetLocalDataBtn" class="btn danger-outline" type="button">重置本地数据</button>
-          <button id="updateVersionBtn" class="btn soft" type="button">检查更新</button>
-        </div>
+        <section class="settings-section">
+          <h4>高级</h4>
+          <div class="settings-card action-card">
+            <button id="resetLocalDataBtn" class="settings-action danger" type="button">
+              <span class="settings-icon"><img src="assets/icons/warning.svg" alt="" /></span>
+              <span class="settings-copy">
+                <strong>重置本地数据</strong>
+                <small>清除本机保存的数据，无法恢复</small>
+              </span>
+              <img class="settings-trail" src="assets/icons/chevron-right.svg" alt="" />
+            </button>
+          </div>
+        </section>
       </section>
+    </div>
+  </dialog>
+
+  <dialog id="transferDialog" class="transfer-dialog">
+    <div class="transfer-panel">
+      <header>
+        <div>
+          <h3>转移到新设备</h3>
+          <p>用迁移码把当前数据复制到另一台设备</p>
+        </div>
+        <button id="closeTransferDialog" class="icon-only" type="button">×</button>
+      </header>
+
+      <div class="transfer-grid">
+        <section class="transfer-box">
+          <strong>旧设备：生成迁移码</strong>
+          <p>复制下方代码，在新设备中粘贴导入。</p>
+          <textarea id="transferCodeOutput" readonly></textarea>
+          <button id="copyTransferCodeBtn" class="btn primary icon-text" type="button"><img src="assets/icons/copy.svg" alt="" />复制迁移码</button>
+        </section>
+
+        <section class="transfer-box">
+          <strong>新设备：导入迁移码</strong>
+          <p>粘贴旧设备生成的迁移码，然后导入。</p>
+          <textarea id="transferCodeInput" placeholder="粘贴迁移码"></textarea>
+          <button id="importTransferCodeBtn" class="btn soft icon-text" type="button"><img src="assets/icons/upload.svg" alt="" />导入到此设备</button>
+        </section>
+      </div>
+
+      <p id="transferStatus" class="transfer-status">迁移码包含当前账单与偏好设置。请只发送给你信任的设备。</p>
     </div>
   </dialog>
 
