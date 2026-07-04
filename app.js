@@ -1,5 +1,7 @@
 const DB_NAME = "recon_separate_tables_v13";
 const DB_VERSION = 1;
+const APP_VERSION = "13";
+const VERSION_URL = "https://codeszhal.github.io/apps/version.json";
 const STATE_STORE = "state";
 const STATE_KEY = "current";
 const LOCAL_KEY = "recon_separate_tables_state_v13";
@@ -25,6 +27,9 @@ let undoDeletePayload = null;
 let undoSnackbarTimer = null;
 let dismissedReminderKey = "";
 let lastSavedImageUrl = "";
+let serviceWorkerRegistration = null;
+let reloadAfterControllerChange = false;
+let controllerReloaded = false;
 
 const $ = (id) => document.getElementById(id);
 const qs = (selector) => document.querySelector(selector);
@@ -231,7 +236,11 @@ const UI_TEXT = {
     expenseAmountDetail: "支出金额详情",
     rowDeleted: "行已删除",
     resetPlaceholder: "Reset local data is a placeholder",
-    versionCurrent: "Version is up to date",
+    versionCurrent: "你已使用最新版本。",
+    checkingUpdate: "正在检查更新…",
+    updateAvailable: "发现新版本：v{version}。重新加载应用？",
+    updateFailed: "无法检查更新，请稍后再试。",
+    reloadAction: "重新加载",
     importSuccess: "导入成功。",
     importFailed: "导入失败。",
     transferCopied: "迁移码已复制。",
@@ -370,7 +379,11 @@ const UI_TEXT = {
     expenseAmountDetail: "Expense amount details",
     rowDeleted: "Row deleted",
     resetPlaceholder: "Reset local data is a placeholder",
-    versionCurrent: "You are up to date",
+    versionCurrent: "You are up to date.",
+    checkingUpdate: "Checking for updates…",
+    updateAvailable: "Update available: v{version}. Reload app?",
+    updateFailed: "Unable to check updates. Please try again.",
+    reloadAction: "Reload",
     importSuccess: "Import complete.",
     importFailed: "Import failed.",
     transferCopied: "Migration code copied.",
@@ -1455,6 +1468,8 @@ el.undoSnackbarBtn.addEventListener("click", () => {
   const { onUndo } = undoDeletePayload;
   clearTimeout(undoSnackbarTimer);
   el.undoSnackbar.hidden = true;
+  el.undoSnackbarBtn.hidden = false;
+  el.undoSnackbarBtn.textContent = text("undo");
   undoDeletePayload = null;
   onUndo();
 });
@@ -1529,15 +1544,29 @@ function showActionPopover(button) {
   el.amountActionPopover.style.top = `${Math.max(12, rect.bottom + 8)}px`;
 }
 
-function showUndoSnackbar(message, onUndo) {
+function showSnackbar(message, { actionLabel = "", onAction = null, duration = 2400 } = {}) {
   clearTimeout(undoSnackbarTimer);
-  undoDeletePayload = { onUndo };
+  undoDeletePayload = onAction ? { onUndo: onAction } : null;
   el.undoSnackbarText.textContent = message;
+  el.undoSnackbarBtn.hidden = !onAction;
+  el.undoSnackbarBtn.textContent = actionLabel || text("undo");
   el.undoSnackbar.hidden = false;
-  undoSnackbarTimer = setTimeout(() => {
-    el.undoSnackbar.hidden = true;
-    undoDeletePayload = null;
-  }, 5000);
+  if (duration > 0) {
+    undoSnackbarTimer = setTimeout(() => {
+      el.undoSnackbar.hidden = true;
+      el.undoSnackbarBtn.hidden = false;
+      el.undoSnackbarBtn.textContent = text("undo");
+      undoDeletePayload = null;
+    }, duration);
+  }
+}
+
+function showUndoSnackbar(message, onUndo) {
+  showSnackbar(message, {
+    actionLabel: text("undo"),
+    onAction: onUndo,
+    duration: 5000
+  });
 }
 
 function deleteEntryWithUndo(side, index) {
@@ -1611,23 +1640,88 @@ el.settingsAutoSave.addEventListener("change", () => {
   saveUiPrefs({ autoSave: el.settingsAutoSave.checked });
 });
 
+function remoteVersionIsNewer(remoteVersion) {
+  const remoteNumber = Number(remoteVersion);
+  const localNumber = Number(APP_VERSION);
+
+  if (Number.isFinite(remoteNumber) && Number.isFinite(localNumber)) {
+    return remoteNumber > localNumber;
+  }
+
+  return String(remoteVersion).localeCompare(String(APP_VERSION), undefined, {
+    numeric: true,
+    sensitivity: "base"
+  }) > 0;
+}
+
+async function updateServiceWorkerRegistration() {
+  if (!("serviceWorker" in navigator)) return null;
+  const registration = serviceWorkerRegistration || await navigator.serviceWorker.getRegistration();
+  if (!registration) return null;
+
+  serviceWorkerRegistration = registration;
+  try {
+    await registration.update();
+  } catch (error) {}
+
+  return registration;
+}
+
+async function clearServiceWorkerCaches() {
+  if (!("caches" in window)) return;
+  const cacheNames = await caches.keys();
+  await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
+}
+
+async function reloadForUpdate(registration) {
+  await clearServiceWorkerCaches();
+  reloadAfterControllerChange = true;
+
+  if (registration?.waiting) {
+    registration.waiting.postMessage({ type: "SKIP_WAITING" });
+    setTimeout(() => {
+      if (!controllerReloaded) window.location.reload();
+    }, 1200);
+    return;
+  }
+
+  window.location.reload();
+}
+
+async function checkForAppUpdate() {
+  el.updateVersionBtn.disabled = true;
+  showSnackbar(text("checkingUpdate"), { duration: 1800 });
+
+  try {
+    const registration = await updateServiceWorkerRegistration();
+    const response = await fetch(`${VERSION_URL}?ts=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) throw new Error("Version check failed");
+
+    const remote = await response.json();
+    if (!remote?.version) throw new Error("Missing remote version");
+
+    if (remoteVersionIsNewer(remote.version)) {
+      showSnackbar(text("updateAvailable", { version: remote.version }), {
+        actionLabel: text("reloadAction"),
+        onAction: () => reloadForUpdate(registration),
+        duration: 0
+      });
+      return;
+    }
+
+    showSnackbar(text("versionCurrent"));
+  } catch (error) {
+    showSnackbar(text("updateFailed"));
+  } finally {
+    el.updateVersionBtn.disabled = false;
+  }
+}
+
 el.resetLocalDataBtn.addEventListener("click", () => {
-  el.undoSnackbarText.textContent = text("resetPlaceholder");
-  el.undoSnackbar.hidden = false;
-  clearTimeout(undoSnackbarTimer);
-  undoSnackbarTimer = setTimeout(() => {
-    el.undoSnackbar.hidden = true;
-  }, 2400);
+  showSnackbar(text("resetPlaceholder"));
 });
 
-el.updateVersionBtn.addEventListener("click", () => {
-  el.undoSnackbarText.textContent = text("versionCurrent");
-  el.undoSnackbar.hidden = false;
-  clearTimeout(undoSnackbarTimer);
-  undoSnackbarTimer = setTimeout(() => {
-    el.undoSnackbar.hidden = true;
-  }, 2400);
-});
+el.updateVersionBtn.addEventListener("click", checkForAppUpdate);
 
 if (el.fontScale) {
   el.fontScale.addEventListener("input", () => {
@@ -2180,7 +2274,14 @@ async function init() {
   setInterval(() => recalculateEverything({ pulse: false }), 2000);
 
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("service-worker.js");
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!reloadAfterControllerChange || controllerReloaded) return;
+      controllerReloaded = true;
+      window.location.reload();
+    });
+
+    serviceWorkerRegistration = await navigator.serviceWorker.register("service-worker.js");
+    updateServiceWorkerRegistration();
   }
 }
 
