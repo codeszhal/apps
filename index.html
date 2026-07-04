@@ -377,6 +377,37 @@
     </div>
   </dialog>
 
+  <dialog id="updateDialog" class="update-dialog">
+    <div class="update-sheet">
+      <span class="sheet-handle" aria-hidden="true"></span>
+      <div class="update-icon" aria-hidden="true">
+        <img src="assets/icons/download.svg" alt="" />
+      </div>
+      <h3 id="updateDialogTitle">Update available</h3>
+      <p id="updateDialogSub">A newer version is ready.</p>
+
+      <div class="version-compare" aria-label="Version comparison">
+        <div>
+          <small id="currentVersionLabel">Current version</small>
+          <strong id="currentVersionValue">v13</strong>
+        </div>
+        <span aria-hidden="true">→</span>
+        <div>
+          <small id="latestVersionLabel">Latest version</small>
+          <strong id="latestVersionValue">v14</strong>
+        </div>
+      </div>
+
+      <div class="safe-note">
+        <img src="assets/icons/check.svg" alt="" />
+        <span id="updateSafeNote">Your saved data will stay safe.</span>
+      </div>
+
+      <button id="updateNowBtn" class="btn primary full" type="button">Update now</button>
+      <button id="updateLaterBtn" class="btn soft full" type="button">Later</button>
+    </div>
+  </dialog>
+
   <div id="amountActionPopover" class="action-popover" hidden>
     <button id="deleteRowFromPopover" type="button">
       <img src="assets/icons/trash.svg" alt="" />

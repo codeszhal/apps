@@ -30,6 +30,8 @@ let lastSavedImageUrl = "";
 let serviceWorkerRegistration = null;
 let reloadAfterControllerChange = false;
 let controllerReloaded = false;
+let pendingUpdateRegistration = null;
+let pendingLatestVersion = "";
 
 const $ = (id) => document.getElementById(id);
 const qs = (selector) => document.querySelector(selector);
@@ -96,7 +98,17 @@ const el = {
   deleteRowFromPopover: $("deleteRowFromPopover"),
   undoSnackbar: $("undoSnackbar"),
   undoSnackbarText: $("undoSnackbarText"),
-  undoSnackbarBtn: $("undoSnackbarBtn")
+  undoSnackbarBtn: $("undoSnackbarBtn"),
+  updateDialog: $("updateDialog"),
+  updateDialogTitle: $("updateDialogTitle"),
+  updateDialogSub: $("updateDialogSub"),
+  currentVersionLabel: $("currentVersionLabel"),
+  currentVersionValue: $("currentVersionValue"),
+  latestVersionLabel: $("latestVersionLabel"),
+  latestVersionValue: $("latestVersionValue"),
+  updateSafeNote: $("updateSafeNote"),
+  updateNowBtn: $("updateNowBtn"),
+  updateLaterBtn: $("updateLaterBtn")
 };
 
 const DEFAULT_LABELS = {
@@ -238,7 +250,13 @@ const UI_TEXT = {
     resetPlaceholder: "Reset local data is a placeholder",
     versionCurrent: "你已使用最新版本。",
     checkingUpdate: "正在检查更新…",
-    updateAvailable: "发现新版本：v{version}。重新加载应用？",
+    updateAvailable: "发现新版本",
+    updateAvailableSub: "新版本已准备好。",
+    currentVersion: "当前版本",
+    latestVersion: "最新版本",
+    updateSafeNote: "已保存的数据会保持安全。",
+    updateNow: "立即更新",
+    updateLater: "稍后",
     updateFailed: "无法检查更新，请稍后再试。",
     reloadAction: "重新加载",
     importSuccess: "导入成功。",
@@ -381,7 +399,13 @@ const UI_TEXT = {
     resetPlaceholder: "Reset local data is a placeholder",
     versionCurrent: "You are up to date.",
     checkingUpdate: "Checking for updates…",
-    updateAvailable: "Update available: v{version}. Reload app?",
+    updateAvailable: "Update available",
+    updateAvailableSub: "A newer version is ready.",
+    currentVersion: "Current version",
+    latestVersion: "Latest version",
+    updateSafeNote: "Your saved data will stay safe.",
+    updateNow: "Update now",
+    updateLater: "Later",
     updateFailed: "Unable to check updates. Please try again.",
     reloadAction: "Reload",
     importSuccess: "Import complete.",
@@ -742,9 +766,22 @@ function updateStaticCopy() {
   setText("#deleteRowFromPopover", "deleteRow");
   qs("#deleteRowFromPopover")?.prepend(Object.assign(document.createElement("img"), { src: "assets/icons/trash.svg", alt: "" }));
   setText("#undoSnackbarBtn", "undo");
+  updateUpdateDialogCopy();
 
   updateBroadcastButtonLabel();
   updateDailyStatus();
+}
+
+function updateUpdateDialogCopy() {
+  setText("#updateDialogTitle", "updateAvailable");
+  setText("#updateDialogSub", "updateAvailableSub");
+  setText("#currentVersionLabel", "currentVersion");
+  setText("#latestVersionLabel", "latestVersion");
+  setText("#updateSafeNote", "updateSafeNote");
+  setText("#updateNowBtn", "updateNow");
+  setText("#updateLaterBtn", "updateLater");
+  if (el.currentVersionValue) el.currentVersionValue.textContent = `v${APP_VERSION}`;
+  if (el.latestVersionValue) el.latestVersionValue.textContent = `v${pendingLatestVersion || APP_VERSION}`;
 }
 
 function reportStatusDate() {
@@ -1688,6 +1725,14 @@ async function reloadForUpdate(registration) {
   window.location.reload();
 }
 
+function showUpdateDialog(remoteVersion, registration) {
+  pendingLatestVersion = String(remoteVersion);
+  pendingUpdateRegistration = registration;
+  updateUpdateDialogCopy();
+  if (el.updateDialog?.open) return;
+  el.updateDialog?.showModal();
+}
+
 async function checkForAppUpdate() {
   el.updateVersionBtn.disabled = true;
   showSnackbar(text("checkingUpdate"), { duration: 1800 });
@@ -1701,11 +1746,8 @@ async function checkForAppUpdate() {
     if (!remote?.version) throw new Error("Missing remote version");
 
     if (remoteVersionIsNewer(remote.version)) {
-      showSnackbar(text("updateAvailable", { version: remote.version }), {
-        actionLabel: text("reloadAction"),
-        onAction: () => reloadForUpdate(registration),
-        duration: 0
-      });
+      el.undoSnackbar.hidden = true;
+      showUpdateDialog(remote.version, registration);
       return;
     }
 
@@ -1722,6 +1764,15 @@ el.resetLocalDataBtn.addEventListener("click", () => {
 });
 
 el.updateVersionBtn.addEventListener("click", checkForAppUpdate);
+
+el.updateNowBtn?.addEventListener("click", () => {
+  el.updateDialog.close();
+  reloadForUpdate(pendingUpdateRegistration);
+});
+
+el.updateLaterBtn?.addEventListener("click", () => {
+  el.updateDialog.close();
+});
 
 if (el.fontScale) {
   el.fontScale.addEventListener("input", () => {
