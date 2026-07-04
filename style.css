@@ -114,14 +114,15 @@ h1 {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  border: 1px solid rgba(255, 77, 79, .35);
+  border: 1px solid rgba(34, 197, 94, .34);
   border-radius: 8px;
   padding: 4px 6px;
-  color: var(--bad);
-  background: #fff7f7;
+  color: #16a34a;
+  background: rgba(240, 253, 244, .86);
   font-size: .66rem;
   font-weight: 1000;
   white-space: nowrap;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, .04), 0 6px 14px rgba(34, 197, 94, .08);
 }
 
 .live-badge span {
@@ -185,7 +186,14 @@ h1 {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  line-height: 1.05;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+#saveImageBtn span {
+  font-size: .58rem;
 }
 
 .daily-status {
@@ -278,15 +286,34 @@ h1 {
 
 .daily-status-cta {
   min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
   border-radius: 9px;
-  padding: 0 9px;
+  padding: 0 10px;
   background: color-mix(in srgb, currentColor 7%, rgba(255, 255, 255, .82));
   color: currentColor;
   font-size: .64rem;
   font-weight: 1000;
+  line-height: 1;
+  white-space: nowrap;
   cursor: pointer;
   transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+}
+
+.daily-status-cta::before {
+  content: attr(data-icon);
+  width: 14px;
+  height: 14px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 4px;
+  color: currentColor;
+  font-size: .72rem;
+  line-height: 1;
+  opacity: .9;
 }
 
 .daily-status-dismiss {
@@ -1660,10 +1687,10 @@ body.theme-dark .amount-box {
 }
 
 body.theme-dark .live-badge {
-  color: #ff6b6d;
-  border-color: rgba(255, 77, 79, .55);
-  background: rgba(255, 77, 79, .12);
-  box-shadow: 0 0 20px rgba(255, 77, 79, .08);
+  color: #4ade80;
+  border-color: rgba(34, 197, 94, .46);
+  background: rgba(34, 197, 94, .11);
+  box-shadow: 0 0 18px rgba(34, 197, 94, .08);
 }
 
 body.theme-dark .calc-toolbar {

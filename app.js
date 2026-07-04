@@ -817,16 +817,19 @@ function updateDailyStatus() {
     el.dailyStatusText.textContent = text("reminderSavedTitle");
     el.dailyStatusSub.textContent = text("reminderSavedSub", { time: formatReminderTime(status.savedAt) });
     el.dailyTelegramCta.textContent = text("reminderViewAction");
+    el.dailyTelegramCta.dataset.icon = "▣";
   } else if (stateName === "modified") {
     el.dailyStatusIcon.textContent = "✎";
     el.dailyStatusText.textContent = text("reminderModifiedTitle");
     el.dailyStatusSub.textContent = text("reminderModifiedSub");
     el.dailyTelegramCta.textContent = text("reminderSaveAction");
+    el.dailyTelegramCta.dataset.icon = "⇩";
   } else {
     el.dailyStatusIcon.textContent = "↥";
     el.dailyStatusText.textContent = text("reminderUnsavedTitle");
     el.dailyStatusSub.textContent = text("reminderUnsavedSub");
     el.dailyTelegramCta.textContent = text("reminderSaveAction");
+    el.dailyTelegramCta.dataset.icon = "⇩";
   }
 
   if (el.dailyStatusDismiss) el.dailyStatusDismiss.setAttribute("aria-label", text("reminderDismiss"));
